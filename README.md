@@ -25,7 +25,7 @@ confirms the tests pass. Every step prints as it happens.
 
 Drive it with a real local model instead of the built-in script (needs
 [Ollama](https://ollama.com) running with a model pulled, for example
-`ollama pull llama3.1:8b`):
+`ollama pull qwen3:8b`):
 
 ```
 make demo-ollama

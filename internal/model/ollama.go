@@ -27,7 +27,7 @@ type Ollama struct {
 //	LOUPE_OLLAMA_MODEL (default llama3.1:8b)
 func NewOllama(client *http.Client) *Ollama {
 	base := env("LOUPE_OLLAMA_URL", "http://localhost:11434")
-	m := env("LOUPE_OLLAMA_MODEL", "llama3.1:8b")
+	m := env("LOUPE_OLLAMA_MODEL", "qwen3:8b")
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -102,7 +102,7 @@ func buildPrompt(t Turn) string {
 		fmt.Fprintf(&b, "- %s: %s\n", ts.Name, ts.Description)
 	}
 	if len(t.Observations) > 0 {
-		b.WriteString("\nWhat you have observed so far:\n")
+		b.WriteString("\nWhat you have observed so far (oldest first):\n")
 		for _, o := range t.Observations {
 			status := "ok"
 			if o.IsError {
@@ -110,6 +110,8 @@ func buildPrompt(t Turn) string {
 			}
 			fmt.Fprintf(&b, "- %s(%q) -> [%s] %s\n", o.Tool, o.Input, status, o.Output)
 		}
+		last := t.Observations[len(t.Observations)-1]
+		fmt.Fprintf(&b, "\nYour most recent observation was %s -> %s\n", last.Tool, last.Output)
 	}
 	b.WriteString(`
 Respond with ONLY a JSON object of this shape:
@@ -117,8 +119,16 @@ Respond with ONLY a JSON object of this shape:
  "tool": "<a tool name to call, or empty>",
  "input": "<the tool input, or empty>",
  "final": "<your final answer, only when the task is done and empty otherwise>"}
-To call write_file, put the file path on the first line of "input" and the full new file contents on the following lines.
-Call exactly one tool per response, or set "final" when the tests pass.`)
+
+Rules:
+- The repository already contains the files you need. Do not invent file names and do not create new files.
+- Start by calling list_files, then read_file on the real files, before editing anything.
+- Only write_file a path you have already seen from list_files or read_file.
+- Look at your most recent observation before deciding.
+- If the most recent run_tests observation says PASS, the task is DONE. Respond with an empty "tool" and put your summary in "final". Do not call any more tools.
+- Never repeat an action whose result you already have above.
+- To call write_file, put the file path on the first line of "input" and the full new file contents on the following lines.
+- Call exactly one tool per response, unless you are done.`)
 	return b.String()
 }
 
