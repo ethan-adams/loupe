@@ -51,6 +51,8 @@ func main() {
 		os.Exit(runServe(os.Args[2:]))
 	case "consensus":
 		os.Exit(runConsensus(os.Args[2:]))
+	case "code-consensus":
+		os.Exit(runCodeConsensus(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -275,6 +277,78 @@ func normalizeForMark(s string) string {
 }
 
 func sameAnswer(a, b string) bool { return normalizeForMark(a) == normalizeForMark(b) }
+
+const codeProblemPrompt = `Write a Python function parse_comp(s) that extracts a salary range from a job posting string and returns [low, high] as integers in annual US dollars, or None if the string contains no number.
+Rules:
+- A number may be plain (95000), use thousands commas (95,000), or use a 'k' or 'K' suffix meaning thousands (180k = 180000). A leading '$' is optional, and you should ignore any surrounding words or units such as 'per year' or 'USD'.
+- If the string gives a range (two numbers separated by '-', an en dash, or the word 'to'), return [low, high].
+- If it gives a single number, return [n, n].
+- If there is no number at all, return None.
+Define only the function parse_comp.`
+
+const codeProblemHarness = `def _check():
+    cases = [
+        ("$180,000 - $220,000", [180000, 220000]),
+        ("180k-220k", [180000, 220000]),
+        ("$180k", [180000, 180000]),
+        ("150K to 200K", [150000, 200000]),
+        ("Competitive", None),
+        ("", None),
+        ("$95,000", [95000, 95000]),
+        ("$200,000 per year", [200000, 200000]),
+    ]
+    p = 0
+    for s, exp in cases:
+        try:
+            got = parse_comp(s)
+            if exp is None:
+                ok = got is None
+            else:
+                ok = got is not None and [int(got[0]), int(got[1])] == exp
+            if ok:
+                p += 1
+        except Exception:
+            pass
+    print("RESULT %d/%d" % (p, len(cases)))
+
+_check()`
+
+func runCodeConsensus(args []string) int {
+	fs := flag.NewFlagSet("code-consensus", flag.ExitOnError)
+	n := fs.Int("n", 5, "how many independent solutions to generate")
+	asJSON := fs.Bool("json", false, "print the raw CodeResult as JSON (for recording)")
+	_ = fs.Parse(args)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	problem := consensus.CodeProblem{Title: "Parse a salary string", Prompt: codeProblemPrompt, Harness: codeProblemHarness}
+	fmt.Fprintf(os.Stderr, "Problem: %s\nGenerating %d solutions, then running each against the tests...\n\n", problem.Title, *n)
+
+	res, err := consensus.RunCode(ctx, problem, *n)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "code-consensus: %v\n", err)
+		return 1
+	}
+
+	if *asJSON {
+		b, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(b))
+		return 0
+	}
+
+	for _, a := range res.Attempts {
+		verdict := "FAIL"
+		if a.Ok {
+			verdict = "PASS"
+		}
+		first := strings.SplitN(strings.TrimSpace(a.Code), "\n", 2)[0]
+		fmt.Printf("  #%d  %s %d/%d   %s\n", a.Index+1, verdict, a.Passed, a.Total, truncate(first, 56))
+	}
+	fmt.Printf("\n  gate = run the tests: %d of %d solutions pass all %d cases.\n", res.Passing, len(res.Attempts), res.Total)
+	fmt.Printf("  ship attempt #%d (passed %d/%d).\n", res.BestIndex+1, res.Attempts[res.BestIndex].Passed, res.Total)
+	return 0
+}
 
 // stream subscribes a terminal renderer, runs fn, and tears down cleanly.
 func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {

@@ -12,7 +12,10 @@ demo-ollama: ## The demo driven by a real local model (needs `ollama serve` + a 
 demo-resume: ## Watch a run survive a worker crash: A commits the fix, dies, B resumes it
 	go run ./cmd/loupe resume-demo
 
-consensus: ## Answer one hard question N ways with a local model, then a gate picks the best (needs Ollama)
+code-consensus: ## Solve a real coding problem N ways, run each against tests, ship one that passes (needs Ollama)
+	go run ./cmd/loupe code-consensus $(if $(N),--n $(N),)
+
+consensus: ## Answer one short question N ways, gate by majority vote + a judge (needs Ollama)
 	go run ./cmd/loupe consensus $(if $(N),--n $(N),) $(if $(Q),--question "$(Q)",)
 
 db-up: ## Start the Postgres run store in Docker

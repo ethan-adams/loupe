@@ -1,0 +1,51 @@
+{
+  "title": "Parse a salary string",
+  "prompt": "Write a Python function parse_comp(s) that extracts a salary range from a job posting string and returns [low, high] as integers in annual US dollars, or None if the string contains no number.\nRules:\n- A number may be plain (95000), use thousands commas (95,000), or use a 'k' or 'K' suffix meaning thousands (180k = 180000). A leading '$' is optional, and you should ignore any surrounding words or units such as 'per year' or 'USD'.\n- If the string gives a range (two numbers separated by '-', an en dash, or the word 'to'), return [low, high].\n- If it gives a single number, return [n, n].\n- If there is no number at all, return None.\nDefine only the function parse_comp.",
+  "attempts": [
+    {
+      "index": 0,
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    num_pattern = r'(\\d+([,.]\\d*)*|\\d*k)'\n    matches = re.findall(num_pattern, s)\n    if not matches:\n        return None\n    nums = []\n    for m in matches:\n        m = m.replace(',', '')\n        if m.endswith('k'):\n            nums.append(int(m[:-1]) * 1000)\n        else:\n            nums.append(int(m))\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    elif len(nums) \u003e= 2:\n        # Check if the numbers are in a range\n        range_pattern = re.compile(r'\\d+\\D*\\d+')\n        if range_pattern.match(''.join(map(str, nums))):\n            return sorted(nums)\n        else:\n            return None\n    else:\n        return None\n\n# Test cases\n# print(parse_comp('salary is $95,000 per year'))  # [95000, 95000]\n# print(parse_comp('range is 180k to 220k'))  # [180000, 220000]\n# print(parse_comp('no numbers here'))  # None\n# print(parse_comp('12k - 15k'))  # [12000, 15000]",
+      "passed": 2,
+      "total": 8,
+      "ok": false
+    },
+    {
+      "index": 1,
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().replace('per year', '').replace('usd', '').strip()\n    numbers = re.findall(r'\\$?\\d[\\d,.]*[kK]?', s)\n    nums = []\n    for num in numbers:\n        num = num.replace('$', '').replace(',', '').replace('k', '').replace('k', '')\n        if 'k' in num:\n            num = num.replace('k', '')\n            num = float(num) * 1000\n        else:\n            num = float(num)\n        nums.append(num)\n    if len(nums) == 0:\n        return None\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return [int(min(nums)), int(max(nums))]",
+      "passed": 5,
+      "total": 8,
+      "ok": false
+    },
+    {
+      "index": 2,
+      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'\\$?\\d[\\d,.]*[kK]?$'  # Matches numbers with optional $, commas, and k/K\n    nums = re.findall(num_pattern, s)\n    nums = [float(n.replace('$', '').replace(',', '').replace('k', '').replace('K', ''))\n            for n in nums]\n    \n    # Handle ranges\n    if len(nums) \u003e= 2:\n        # Check for range indicators\n        range_words = ['to', '-', '–']\n        for word in range_words:\n            if word in s:\n                try:\n                    low = min(nums)\n                    high = max(nums)\n                    return [int(low), int(high)]\n                except:\n                    return None\n        # If no range indicator, return the two numbers as [low, high]\n        return [int(min(nums)), int(max(nums))]\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return None",
+      "passed": 3,
+      "total": 8,
+      "ok": false
+    },
+    {
+      "index": 3,
+      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'(\\$?\\d[\\d,.]*[kK]?)' \n    matches = re.findall(num_pattern, s.lower())\n    numbers = []\n    for m in matches:\n        m = m.replace('$', '').replace(',', '')\n        if 'k' in m:\n            val = float(m.replace('k', '')) * 1000\n        else:\n            val = float(m)\n        numbers.append(int(val))\n    if len(numbers) == 0:\n        return None\n    elif len(numbers) == 1:\n        return [numbers[0], numbers[0]]\n    else:\n        return sorted(numbers)",
+      "passed": 8,
+      "total": 8,
+      "ok": true
+    },
+    {
+      "index": 4,
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().strip()\n    num_pattern = r'\\$?\\d+([,\\d]*)([kK])?|\\$?\\d+([,\\d]*)' \n    nums = re.findall(num_pattern, s)\n    nums = [n.replace('$', '').replace(',', '') for n in nums]\n    nums = [int(n) for n in nums if n.replace('k', '').isdigit()]\n    if not nums:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    # Handle ranges with 'to' or '-'\n    range_pattern = r'(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))\\s*(to|\\-|and)\\s*(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))'\n    range_match = re.search(range_pattern, s)\n    if range_match:\n        parts = range_match.groups()\n        low = parse_number(parts[0])\n        high = parse_number(parts[5])\n        return [low, high]\n    return [nums[0], nums[0]]\n\ndef parse_number(s):\n    s = s.replace('$', '').replace(',', '')\n    if 'k' in s:\n        val = int(s.replace('k', '')) * 1000\n    else:\n        val = int(s)\n    return val",
+      "passed": 2,
+      "total": 8,
+      "ok": false
+    },
+    {
+      "index": 5,
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    nums = re.findall(r'\\d+\\.?\\d*|\\d+|\\d+k', s)\n    nums = [int(n.replace('k', '').replace(',', '')) * 1000 if n.endswith('k') else int(n.replace(',', '')) for n in nums]\n    nums = [x for x in nums if x \u003e 0]\n    if len(nums) \u003c 1:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    nums.sort()\n    for i in range(len(nums)-1, 0, -1):\n        if nums[i] \u003c nums[i-1]:\n            nums.pop(i)\n    if len(nums) \u003e= 2:\n        return [nums[0], nums[-1]]\n    return None",
+      "passed": 2,
+      "total": 8,
+      "ok": false
+    }
+  ],
+  "bestIndex": 3,
+  "total": 8,
+  "passing": 1
+}

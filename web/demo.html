@@ -9,13 +9,14 @@
     color-scheme: light dark;
     --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2a313c;
     --text: #e6edf3; --muted: #8b98a9; --accent: #d9b45a;
-    --ok: #4bb37a; --err: #e5646e;
+    --ok: #4bb37a; --err: #e5646e; --amber: #d9b45a;
+    --code: #0b0e13;
   }
   @media (prefers-color-scheme: light) {
     :root {
       --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef1f5; --border: #e2e6ec;
       --text: #16202b; --muted: #5b6675; --accent: #9a7a1f;
-      --ok: #1f8a54; --err: #c23a44;
+      --ok: #1f8a54; --err: #c23a44; --amber: #9a7a1f; --code: #f2f4f7;
     }
   }
   * { box-sizing: border-box; }
@@ -25,24 +26,17 @@
     -webkit-font-smoothing: antialiased;
   }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  main { max-width: 680px; margin: 0 auto; padding: 2.4rem 1.2rem 4rem; }
+  main { max-width: 720px; margin: 0 auto; padding: 2.4rem 1.2rem 4rem; }
   .brand { font-family: ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
   .brand b { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: .3rem 0 .2rem; letter-spacing: -.01em; }
-  .sub { color: var(--muted); margin: 0 0 1.4rem; }
-
-  .tabs { display: flex; gap: .5rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
-  .tab {
-    font: inherit; cursor: pointer; background: var(--panel); color: var(--text);
-    border: 1px solid var(--border); border-radius: 9px; padding: .45rem .85rem; text-align: left;
-  }
-  .tab.active { border-color: var(--accent); }
-  .tab .t { font-weight: 600; display: block; }
-  .tab .d { font-size: 11.5px; color: var(--muted); }
+  .sub { color: var(--muted); margin: 0 0 1.4rem; max-width: 60ch; }
 
   .q { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; }
   .q .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-  .q .text { margin-top: .35rem; }
+  .q .text { margin-top: .4rem; white-space: pre-wrap; }
+  .q .cases { margin-top: .7rem; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .q .cases b { color: var(--text); font-weight: 600; }
 
   .controls { display: flex; align-items: center; gap: .9rem; margin: 1.2rem 0 .4rem; }
   button.act { font: inherit; font-weight: 600; cursor: pointer; color: var(--bg); background: var(--accent); border: none; border-radius: 9px; padding: .55rem 1.1rem; }
@@ -50,50 +44,38 @@
   button:disabled { opacity: .5; cursor: default; }
   .status { color: var(--muted); font-size: 13px; }
 
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: 1.1rem; }
-  @media (max-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .list { display: flex; flex-direction: column; gap: .7rem; margin-top: 1.2rem; }
   .att {
     border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px; background: var(--panel);
-    padding: .6rem .7rem; min-height: 92px; opacity: 0; transform: translateY(6px);
-    transition: opacity .3s, transform .3s, border-color .3s;
+    overflow: hidden; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s, border-color .3s;
   }
   .att.show { opacity: 1; transform: none; }
-  .att .n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
-  .att .ans { font-family: ui-monospace, Menlo, monospace; font-weight: 600; margin: .25rem 0; line-height: 1.25; }
-  .att.num .ans { font-size: 1.5rem; }
-  .att.text .ans { font-size: .92rem; }
-  .att .why { font-size: 11.5px; color: var(--muted); line-height: 1.35; max-height: 3.9em; overflow: hidden; }
+  .att .head { display: flex; align-items: center; justify-content: space-between; padding: .55rem .8rem; }
+  .att .who { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .att .who .ship { color: var(--ok); font-weight: 600; margin-left: .5rem; }
+  .badge { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 600; padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--border); }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  .badge.part { color: var(--amber); border-color: var(--amber); }
+  .badge.bad { color: var(--err); border-color: var(--err); }
+  .badge.none { color: var(--muted); }
+  .badge.run { color: var(--muted); }
   .att.win { border-left-color: var(--ok); }
-  .att.out { border-left-color: var(--err); }
-  .att.out .ans { color: var(--err); }
-  .att.neutral { border-left-color: var(--border); }
-  .att .chip { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
-  .att .chip.bad { color: var(--err); }
-  .att .chip.good { color: var(--ok); }
-  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: .6rem auto; }
+  .att.part { border-left-color: var(--amber); }
+  .att.bad { border-left-color: var(--err); }
+  .att.none { border-left-color: var(--muted); }
+  pre.code {
+    margin: 0; padding: .7rem .85rem; background: var(--code); border-top: 1px solid var(--border);
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.5; color: var(--text);
+    max-height: 190px; overflow: auto; white-space: pre;
+  }
+  .spinner { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .gate { margin-top: 1.6rem; border-top: 1px solid var(--border); padding-top: 1.4rem; opacity: 0; transition: opacity .4s; }
+  .gate { margin-top: 1.7rem; border-top: 1px solid var(--border); padding-top: 1.4rem; opacity: 0; transition: opacity .4s; }
   .gate.show { opacity: 1; }
-  .gate h2 { font-size: 1rem; margin: 0 0 .7rem; }
-  .gate h2 .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
-  .vote { display: grid; grid-template-columns: minmax(64px,auto) 1fr auto; align-items: center; gap: .7rem; margin-bottom: .5rem; }
-  .vote .val { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 13px; }
-  .vote .track { height: 12px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
-  .vote .fill { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
-  .vote.win .fill { background: var(--ok); }
-  .vote .cnt { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-  .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: 1.1rem; }
-  @media (max-width: 560px) { .cards2 { grid-template-columns: 1fr; } }
-  .rescard { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: .8rem .9rem; }
-  .rescard .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
-  .rescard .big { font-family: ui-monospace, Menlo, monospace; font-weight: 600; margin: .25rem 0; }
-  .rescard.num .big { font-size: 1.7rem; }
-  .rescard.text .big { font-size: 1rem; line-height: 1.3; }
-  .rescard .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
-
-  .verdict { margin-top: 1.1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .8rem .95rem; line-height: 1.45; }
+  .gate .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .gate h2 { font-size: 1.1rem; margin: .3rem 0 .2rem; }
+  .verdict { margin-top: 1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .8rem .95rem; line-height: 1.45; }
   .verdict .ok { color: var(--ok); }
   .foot { margin-top: 2.2rem; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -103,293 +85,183 @@
 <main>
   <div class="brand">l<b>o</b>upe</div>
   <h1>Best of N</h1>
-  <p class="sub">One question, answered many ways by a local model. Watch the answers diverge, then a gate picks the one to trust. Pick a question:</p>
-
-  <div class="tabs" id="tabs"></div>
+  <p class="sub">Ask a local model to solve a real coding problem several times. The answers diverge and most have bugs. The gate is not a vote or an opinion: every solution is run against the tests, and you ship one that passes.</p>
 
   <div class="q">
-    <div class="label">The question</div>
-    <div class="text" id="q"></div>
+    <div class="label">The problem</div>
+    <div class="text" id="prompt"></div>
+    <div class="cases">Hidden tests cover: <b>"$180,000 - $220,000"</b>, <b>"180k-220k"</b>, <b>"150K to 200K"</b>, <b>"$95,000"</b>, <b>"$200,000 per year"</b>, <b>"Competitive"</b> &rarr; None, and more.</div>
   </div>
 
   <div class="controls">
-    <button class="act" id="run">Run consensus</button>
+    <button class="act" id="run">Run best of N</button>
     <button class="ghost" id="reset" hidden>Replay</button>
     <span class="status" id="status"></span>
   </div>
 
-  <div class="grid" id="grid"></div>
+  <div class="list" id="list"></div>
 
   <div class="gate" id="gate" hidden>
-    <h2 id="gateTitle"></h2>
-    <div id="votes"></div>
-    <div class="cards2">
-      <div class="rescard" id="majCard">
-        <div class="label" id="majLabel"></div>
-        <div class="big" id="majority"></div>
-        <div class="note" id="majNote"></div>
-      </div>
-      <div class="rescard" id="judgeCard">
-        <div class="label">Gate 2 · Judge</div>
-        <div class="big" id="judge"></div>
-        <div class="note" id="judgeWhy"></div>
-      </div>
-    </div>
+    <div class="label">The gate · run the tests</div>
+    <h2 id="gateLine"></h2>
     <div class="verdict" id="verdict"></div>
   </div>
 
-  <p class="foot">Real recorded runs: one local model, one question, several independent tries at temperature 0.7. A single call is sometimes wrong or shallow; sampling and gating is how you get an answer you can trust. It is the front door to evaluating agents.</p>
+  <p class="foot" id="foot"></p>
 </main>
 
 <script>
-const SCENARIOS = [
-  { title: "Word problem", desc: "one right answer", kind: "num", data: {
-  "question": "A notebook and a pen cost $2.60 in total. The notebook costs $2.00 more than the pen. How much does the pen cost, in dollars? Answer with just the number.",
-  "expected": "0.30",
+const DATA = {
+  "title": "Parse a salary string",
+  "prompt": "Write a Python function parse_comp(s) that extracts a salary range from a job posting string and returns [low, high] as integers in annual US dollars, or None if the string contains no number.\nRules:\n- A number may be plain (95000), use thousands commas (95,000), or use a 'k' or 'K' suffix meaning thousands (180k = 180000). A leading '$' is optional, and you should ignore any surrounding words or units such as 'per year' or 'USD'.\n- If the string gives a range (two numbers separated by '-', an en dash, or the word 'to'), return [low, high].\n- If it gives a single number, return [n, n].\n- If there is no number at all, return None.\nDefine only the function parse_comp.",
   "attempts": [
     {
       "index": 0,
-      "reasoning": "Let the pen's cost be x. The notebook is x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives x = 0.30.",
-      "answer": "0.30",
-      "norm": "0.30"
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    num_pattern = r'(\\d+([,.]\\d*)*|\\d*k)'\n    matches = re.findall(num_pattern, s)\n    if not matches:\n        return None\n    nums = []\n    for m in matches:\n        m = m.replace(',', '')\n        if m.endswith('k'):\n            nums.append(int(m[:-1]) * 1000)\n        else:\n            nums.append(int(m))\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    elif len(nums) \u003e= 2:\n        # Check if the numbers are in a range\n        range_pattern = re.compile(r'\\d+\\D*\\d+')\n        if range_pattern.match(''.join(map(str, nums))):\n            return sorted(nums)\n        else:\n            return None\n    else:\n        return None\n\n# Test cases\n# print(parse_comp('salary is $95,000 per year'))  # [95000, 95000]\n# print(parse_comp('range is 180k to 220k'))  # [180000, 220000]\n# print(parse_comp('no numbers here'))  # None\n# print(parse_comp('12k - 15k'))  # [12000, 15000]",
+      "passed": 2,
+      "total": 8,
+      "ok": false
     },
     {
       "index": 1,
-      "reasoning": "Let the pen cost x. Then the notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve for x.",
-      "answer": "0.80",
-      "norm": "0.80"
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().replace('per year', '').replace('usd', '').strip()\n    numbers = re.findall(r'\\$?\\d[\\d,.]*[kK]?', s)\n    nums = []\n    for num in numbers:\n        num = num.replace('$', '').replace(',', '').replace('k', '').replace('k', '')\n        if 'k' in num:\n            num = num.replace('k', '')\n            num = float(num) * 1000\n        else:\n            num = float(num)\n        nums.append(num)\n    if len(nums) == 0:\n        return None\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return [int(min(nums)), int(max(nums))]",
+      "passed": 5,
+      "total": 8,
+      "ok": false
     },
     {
       "index": 2,
-      "reasoning": "Let the pen cost x dollars. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives 2x + 2.00 = 2.60, so 2x = 0.60, and x = 0.30.",
-      "answer": "0.30",
-      "norm": "0.30"
+      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'\\$?\\d[\\d,.]*[kK]?$'  # Matches numbers with optional $, commas, and k/K\n    nums = re.findall(num_pattern, s)\n    nums = [float(n.replace('$', '').replace(',', '').replace('k', '').replace('K', ''))\n            for n in nums]\n    \n    # Handle ranges\n    if len(nums) \u003e= 2:\n        # Check for range indicators\n        range_words = ['to', '-', '–']\n        for word in range_words:\n            if word in s:\n                try:\n                    low = min(nums)\n                    high = max(nums)\n                    return [int(low), int(high)]\n                except:\n                    return None\n        # If no range indicator, return the two numbers as [low, high]\n        return [int(min(nums)), int(max(nums))]\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return None",
+      "passed": 3,
+      "total": 8,
+      "ok": false
     },
     {
       "index": 3,
-      "reasoning": "Let the pen cost x dollars. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve equation 2x + 2.00 = 2.60.",
-      "answer": "0.30",
-      "norm": "0.30"
+      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'(\\$?\\d[\\d,.]*[kK]?)' \n    matches = re.findall(num_pattern, s.lower())\n    numbers = []\n    for m in matches:\n        m = m.replace('$', '').replace(',', '')\n        if 'k' in m:\n            val = float(m.replace('k', '')) * 1000\n        else:\n            val = float(m)\n        numbers.append(int(val))\n    if len(numbers) == 0:\n        return None\n    elif len(numbers) == 1:\n        return [numbers[0], numbers[0]]\n    else:\n        return sorted(numbers)",
+      "passed": 8,
+      "total": 8,
+      "ok": true
     },
     {
       "index": 4,
-      "reasoning": "Let the pen's cost be x. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives x = 0.30.",
-      "answer": "0.30",
-      "norm": "0.30"
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().strip()\n    num_pattern = r'\\$?\\d+([,\\d]*)([kK])?|\\$?\\d+([,\\d]*)' \n    nums = re.findall(num_pattern, s)\n    nums = [n.replace('$', '').replace(',', '') for n in nums]\n    nums = [int(n) for n in nums if n.replace('k', '').isdigit()]\n    if not nums:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    # Handle ranges with 'to' or '-'\n    range_pattern = r'(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))\\s*(to|\\-|and)\\s*(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))'\n    range_match = re.search(range_pattern, s)\n    if range_match:\n        parts = range_match.groups()\n        low = parse_number(parts[0])\n        high = parse_number(parts[5])\n        return [low, high]\n    return [nums[0], nums[0]]\n\ndef parse_number(s):\n    s = s.replace('$', '').replace(',', '')\n    if 'k' in s:\n        val = int(s.replace('k', '')) * 1000\n    else:\n        val = int(s)\n    return val",
+      "passed": 2,
+      "total": 8,
+      "ok": false
     },
     {
       "index": 5,
-      "reasoning": "Let the pen's cost be x. The notebook is x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve equation 2x + 2.00 = 2.60.",
-      "answer": "0.30",
-      "norm": "0.30"
+      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    nums = re.findall(r'\\d+\\.?\\d*|\\d+|\\d+k', s)\n    nums = [int(n.replace('k', '').replace(',', '')) * 1000 if n.endswith('k') else int(n.replace(',', '')) for n in nums]\n    nums = [x for x in nums if x \u003e 0]\n    if len(nums) \u003c 1:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    nums.sort()\n    for i in range(len(nums)-1, 0, -1):\n        if nums[i] \u003c nums[i-1]:\n            nums.pop(i)\n    if len(nums) \u003e= 2:\n        return [nums[0], nums[-1]]\n    return None",
+      "passed": 2,
+      "total": 8,
+      "ok": false
     }
   ],
-  "tally": [
-    {
-      "answer": "0.30",
-      "count": 5
-    },
-    {
-      "answer": "0.80",
-      "count": 1
-    }
-  ],
-  "majority": "0.30",
-  "judge": "0.30",
-  "judgeWhy": "Let the pen cost x. Then the notebook costs x + 2.00. Total cost: x + (x + 2.00) = 2.60. Solving gives x = 0.30."
-} },
-  { title: "Agent design", desc: "open-ended", kind: "text", data: {
-  "question": "An AI agent keeps getting stuck in a loop: it calls the same tool over and over without making progress toward the goal. In one short sentence, name the single best way to detect and stop this. Answer with just the approach itself, concisely.",
-  "attempts": [
-    {
-      "index": 0,
-      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool usage frequency can detect this behavior. Limiting the number of consecutive tool calls prevents infinite loops and ensures progress toward the goal.",
-      "answer": "Limit consecutive tool calls.",
-      "norm": "limitconsecutivetoolcalls"
-    },
-    {
-      "index": 1,
-      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency can detect this pattern. Limiting the number of consecutive identical tool calls would prevent infinite loops.",
-      "answer": "Limit consecutive identical tool calls.",
-      "norm": "limitconsecutiveidenticaltoolcalls"
-    },
-    {
-      "index": 2,
-      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool invocation frequency can detect this behavior. Limiting the number of consecutive identical tool calls would prevent the loop and allow the agent to explore alternative actions.",
-      "answer": "Limit consecutive identical tool calls.",
-      "norm": "limitconsecutiveidenticaltoolcalls"
-    },
-    {
-      "index": 3,
-      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency and detecting redundant calls can identify this pattern. Implementing a check for repeated tool calls within a defined timeframe would allow intervention.",
-      "answer": "Detect repeated tool calls within a timeframe.",
-      "norm": "detectrepeatedtoolcallswithinatimeframe"
-    },
-    {
-      "index": 4,
-      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking the number of unique tool calls can detect this behavior. Once a tool is called multiple times without progress, the system can intervene to stop the loop.",
-      "answer": "Track and limit unique tool calls per iteration.",
-      "norm": "trackandlimituniquetoolcallsperiteration"
-    }
-  ],
-  "tally": [
-    {
-      "answer": "Limit consecutive identical tool calls.",
-      "count": 2
-    },
-    {
-      "answer": "Detect repeated tool calls within a timeframe.",
-      "count": 1
-    },
-    {
-      "answer": "Limit consecutive tool calls.",
-      "count": 1
-    },
-    {
-      "answer": "Track and limit unique tool calls per iteration.",
-      "count": 1
-    }
-  ],
-  "majority": "Limit consecutive identical tool calls.",
-  "judge": "Limit consecutive identical tool calls.",
-  "judgeWhy": "This directly addresses the loop by restricting repeated identical actions, preventing infinite cycles without progress."
-} },
-];
-const $ = (id) => document.getElementById(id);
+  "bestIndex": 3,
+  "total": 8,
+  "passing": 1
+};
+const el = (id) => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let cur = SCENARIOS[0], es = null;
 
-function norm(s){ return String(s).toLowerCase().trim().replace(/\.$/,'').replace(/[$, ]/g,''); }
-function topNorm(){ return norm(cur.data.majority); }
+el('prompt').textContent = DATA.prompt;
+el('foot').textContent = 'A real recorded run: ' + DATA.attempts.length + ' independent solutions from one local model at temperature 0.8, each executed against ' + DATA.total + ' hidden test cases. A single call would have shipped one of the buggy ones silently.';
 
-function renderTabs() {
-  const t = $('tabs'); t.innerHTML = '';
-  SCENARIOS.forEach((s, i) => {
-    const b = document.createElement('button');
-    b.className = 'tab' + (s === cur ? ' active' : '');
-    b.innerHTML = '<span class="t">' + s.title + '</span><span class="d">' + s.desc + '</span>';
-    b.onclick = () => select(i);
-    t.appendChild(b);
-  });
+function grade(a) {
+  if (!a.code) return { cls: 'none', text: 'no code' };
+  if (a.ok) return { cls: 'ok', text: 'PASS ' + a.passed + '/' + a.total };
+  if (a.passed > 0) return { cls: 'part', text: a.passed + '/' + a.total };
+  return { cls: 'bad', text: a.passed + '/' + a.total };
 }
 
-function select(i) {
-  cur = SCENARIOS[i];
-  renderTabs();
-  $('q').textContent = cur.data.question;
-  reset();
+function makeCard(a) {
+  const card = document.createElement('div');
+  card.className = 'att';
+  const head = document.createElement('div');
+  head.className = 'head';
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = 'attempt #' + (a.index + 1);
+  const badge = document.createElement('span');
+  badge.className = 'badge run';
+  badge.innerHTML = '<span class="spinner"></span>';
+  head.appendChild(who);
+  head.appendChild(badge);
+  card.appendChild(head);
+  return { card, who, badge };
+}
+
+function reveal(parts, a, isBest) {
+  const g = grade(a);
+  parts.badge.className = 'badge ' + g.cls;
+  parts.badge.textContent = g.text;
+  parts.card.classList.add(g.cls === 'ok' ? 'win' : g.cls);
+  if (isBest) {
+    const ship = document.createElement('span');
+    ship.className = 'ship';
+    ship.textContent = '✓ shipped';
+    parts.who.appendChild(ship);
+  }
+  if (a.code) {
+    const pre = document.createElement('pre');
+    pre.className = 'code';
+    pre.textContent = a.code;
+    parts.card.appendChild(pre);
+  } else if (a.note) {
+    const pre = document.createElement('pre');
+    pre.className = 'code';
+    pre.textContent = '// ' + a.note;
+    parts.card.appendChild(pre);
+  }
 }
 
 function reset() {
-  $('grid').innerHTML = '';
-  $('gate').hidden = true; $('gate').classList.remove('show');
-  $('votes').innerHTML = '';
-  $('reset').hidden = true;
-  $('status').textContent = '';
-  $('run').disabled = false;
-}
-
-function attemptCard(i) {
-  const el = document.createElement('div');
-  el.className = 'att ' + (cur.kind === 'num' ? 'num' : 'text');
-  el.innerHTML = '<div class="n">attempt #' + (i+1) + '</div><div class="spinner"></div>';
-  return el;
-}
-
-function fillCard(el, a) {
-  const matchesTop = norm(a.answer) === topNorm();
-  el.className = 'att ' + (cur.kind === 'num' ? 'num ' : 'text ');
-  let chip = '';
-  if (cur.kind === 'num') {
-    el.className += matchesTop ? 'win' : 'out';
-    if (!matchesTop) chip = ' <span class="chip bad">outlier</span>';
-  } else {
-    el.className += matchesTop ? 'win' : 'neutral';
-    if (matchesTop) chip = ' <span class="chip good">plurality</span>';
-  }
-  el.classList.add('show');
-  el.innerHTML =
-    '<div class="n">attempt #' + (a.index+1) + chip + '</div>' +
-    '<div class="ans">' + a.answer + '</div>' +
-    '<div class="why">' + a.reasoning + '</div>';
+  el('list').innerHTML = '';
+  el('gate').hidden = true; el('gate').classList.remove('show');
+  el('reset').hidden = true;
+  el('status').textContent = '';
+  el('run').disabled = false;
 }
 
 async function run() {
   reset();
-  $('run').disabled = true;
-  const atts = cur.data.attempts;
-  $('status').textContent = 'running ' + atts.length + ' attempts in parallel...';
+  el('run').disabled = true;
+  el('status').textContent = 'generating ' + DATA.attempts.length + ' solutions, then running the tests...';
 
-  const cards = atts.map((a, i) => {
-    const el = attemptCard(i);
-    $('grid').appendChild(el);
-    requestAnimationFrame(() => el.classList.add('show'));
-    return el;
+  const parts = DATA.attempts.map(a => {
+    const p = makeCard(a);
+    el('list').appendChild(p.card);
+    requestAnimationFrame(() => p.card.classList.add('show'));
+    return p;
   });
 
-  const step = reduce ? 0 : 640;
-  for (let i = 0; i < atts.length; i++) { await wait(step); fillCard(cards[i], atts[i]); }
+  const step = reduce ? 0 : 760;
+  for (let i = 0; i < DATA.attempts.length; i++) {
+    await wait(step);
+    reveal(parts[i], DATA.attempts[i], i === DATA.bestIndex);
+  }
 
   await wait(reduce ? 0 : 500);
   renderGate();
-  $('reset').hidden = false;
-  $('status').textContent = '';
+  el('reset').hidden = false;
+  el('status').textContent = '';
 }
 
 function renderGate() {
-  const d = cur.data, isNum = cur.kind === 'num';
-  const gate = $('gate');
+  const gate = el('gate');
   gate.hidden = false;
   requestAnimationFrame(() => gate.classList.add('show'));
-
-  $('gateTitle').innerHTML = '<span class="label">Gate 1 · </span> ' + (isNum ? 'Majority vote' : 'How the approaches clustered');
-
-  const max = Math.max.apply(null, d.tally.map(v => v.count));
-  const votes = $('votes'); votes.innerHTML = '';
-  d.tally.forEach(v => {
-    const win = norm(v.answer) === topNorm();
-    const pct = Math.max(6, Math.round(100 * v.count / max));
-    const row = document.createElement('div');
-    row.className = 'vote' + (win ? ' win' : '');
-    row.innerHTML =
-      '<span class="val">' + v.answer + '</span>' +
-      '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
-      '<span class="cnt">' + v.count + (v.count === 1 ? ' vote' : ' votes') + '</span>';
-    votes.appendChild(row);
-  });
-
-  $('majCard').className = 'rescard ' + cur.kind;
-  $('judgeCard').className = 'rescard ' + cur.kind;
-  $('majLabel').textContent = isNum ? 'Majority' : 'Plurality';
-  $('majority').textContent = d.majority;
-  $('majNote').textContent = isNum ? 'The answer the most attempts agreed on.' : 'The approach the most attempts landed on.';
-  $('judge').textContent = d.judge;
-  $('judgeWhy').textContent = d.judgeWhy;
-
-  const total = d.attempts.length;
-  if (d.expected) {
-    const right = norm(d.expected) === topNorm();
-    $('verdict').innerHTML = 'Correct answer: <span class="mono">' + d.expected + '</span>. Both gates agreed on it ' +
-      (right ? '<span class="ok">&#10003;</span>' : '') + ' &mdash; even though one attempt did not.';
-  } else {
-    const judgeMatches = norm(d.judge) === topNorm();
-    const plur = d.tally[0].count;
-    $('verdict').innerHTML = 'No single right answer here. ' + total + ' independent attempts spread across ' + d.tally.length + ' approaches. ' +
-      (judgeMatches
-        ? 'The plurality (' + plur + ' of ' + total + ') and an independent judge landed on the same one <span class="ok">&#10003;</span> &mdash; that agreement is the signal: '
-        : 'The judge picked the strongest of them: ') +
-      '<span class="mono">' + d.judge + '</span>';
-  }
+  el('gateLine').textContent = DATA.passing + ' of ' + DATA.attempts.length + ' solutions pass all ' + DATA.total + ' tests. Ship attempt #' + (DATA.bestIndex + 1) + '.';
+  const buggy = DATA.attempts.length - DATA.passing;
+  el('verdict').innerHTML = buggy + ' of ' + DATA.attempts.length + ' solutions had real bugs &mdash; the kind a single call would ship silently. Running every candidate against the tests is what separates the one that works <span class="ok">&#10003;</span> from the ones that look right but are not.';
 }
 
-function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-$('run').onclick = run;
-$('reset').onclick = run;
-renderTabs();
-const params = new URLSearchParams(location.search);
-select(Number(params.get('s')) || 0);
-if (params.has('autoplay')) run();
+el('run').onclick = run;
+el('reset').onclick = run;
+if (location.search.includes('autoplay')) run();
 </script>
 </body>
 </html>

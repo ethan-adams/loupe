@@ -62,27 +62,29 @@ make worker                # claim and run work, streamed live (Ctrl-C to stop)
 Start more than one `make worker` and they share the queue. Kill one mid-run and
 another reclaims its run once the lease expires.
 
-## Best of N: turn a spread into one reliable answer
+## Best of N: run every candidate against the tests
 
-A single model call gives you one shot, and on a hard question it is sometimes
-wrong. Run the same question many ways and gate the results, and you get an answer
-you can trust. Needs Ollama:
+A single model call is often wrong or shallow. Ask it to solve a real coding
+problem several times and the solutions diverge, most with bugs. The gate here is
+not a vote or an opinion: every candidate is executed against a hidden test suite,
+and you ship one that passes. Needs Ollama:
 
 ```
-make consensus
+make code-consensus
 ```
 
-It asks one question six times in parallel (the answers genuinely diverge), then
-two gates pick the winner: a **majority vote** and an **independent judge** that
-works the problem itself. On the built-in question one attempt lands on the wrong
-value and gets outvoted five to one, and the judge agrees. This is the front door
-to evaluating agents: sample, then score.
+On the built-in problem, parsing a messy salary string into `[low, high]`, six
+solutions come back and only one passes all eight tests. The other five have real
+bugs a single call would have shipped silently; running the tests is what tells
+them apart. This is the front door to evaluating agents.
 
-There is also a self-contained visual version at [`web/demo.html`](web/demo.html)
-(open it in a browser) that replays a real recorded run: the attempts stream in,
-one diverges, and the gate picks the answer to trust.
+A self-contained visual replay of a real recorded run is at
+[`web/demo.html`](web/demo.html) (open it in a browser).
 
-![Best of N: six attempts, one outlier, and a gate that picks the right answer](docs/consensus-demo.png)
+![Best of N: six code solutions run against the tests, one passes and ships](docs/consensus-demo.png)
+
+A lighter variant for short-answer questions, where the gate is a majority vote
+plus an independent judge instead of tests, is `make consensus`.
 
 ## Query it, stream it
 
