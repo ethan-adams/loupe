@@ -46,41 +46,16 @@ type decisionJSON struct {
 }
 
 func (o *Ollama) Next(ctx context.Context, t Turn) (Decision, error) {
-	body := map[string]any{
-		"model":  o.model,
-		"prompt": buildPrompt(t),
-		"stream": false,
-		"format": "json", // ask Ollama to constrain output to JSON
-	}
-	buf, _ := json.Marshal(body)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.baseURL+"/api/generate", bytes.NewReader(buf))
+	raw, err := o.generate(ctx, buildPrompt(t), nil)
 	if err != nil {
 		return Decision{}, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := o.client.Do(req)
-	if err != nil {
-		return Decision{}, fmt.Errorf("ollama request failed (is `ollama serve` running?): %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return Decision{}, fmt.Errorf("ollama returned %s", resp.Status)
-	}
-
-	var envelope struct {
-		Response string `json:"response"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
-		return Decision{}, fmt.Errorf("decode ollama envelope: %w", err)
-	}
 
 	var dj decisionJSON
-	if err := json.Unmarshal([]byte(envelope.Response), &dj); err != nil {
+	if err := json.Unmarshal([]byte(raw), &dj); err != nil {
 		// The model ignored the JSON instruction; treat its prose as a final
 		// answer rather than crashing the run.
-		return Decision{Thought: "(model returned unstructured text)", Final: strings.TrimSpace(envelope.Response)}, nil
+		return Decision{Thought: "(model returned unstructured text)", Final: strings.TrimSpace(raw)}, nil
 	}
 
 	d := Decision{Thought: strings.TrimSpace(dj.Thought)}
@@ -90,6 +65,46 @@ func (o *Ollama) Next(ctx context.Context, t Turn) (Decision, error) {
 		d.Final = strings.TrimSpace(dj.Final)
 	}
 	return d, nil
+}
+
+// generate is one call to Ollama's /api/generate with JSON-constrained output.
+// opts, if non-nil, is passed through as Ollama options (e.g. temperature, seed),
+// which is how the consensus demo makes parallel attempts diverge.
+func (o *Ollama) generate(ctx context.Context, prompt string, opts map[string]any) (string, error) {
+	body := map[string]any{"model": o.model, "prompt": prompt, "stream": false, "format": "json"}
+	if opts != nil {
+		body["options"] = opts
+	}
+	buf, _ := json.Marshal(body)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.baseURL+"/api/generate", bytes.NewReader(buf))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := o.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("ollama request failed (is `ollama serve` running?): %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("ollama returned %s", resp.Status)
+	}
+
+	var envelope struct {
+		Response string `json:"response"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return "", fmt.Errorf("decode ollama envelope: %w", err)
+	}
+	return envelope.Response, nil
+}
+
+// Ask is a single-shot JSON completion. The consensus demo uses it to answer one
+// question many times; opts sets Ollama options like temperature and seed.
+func (o *Ollama) Ask(ctx context.Context, prompt string, opts map[string]any) (string, error) {
+	return o.generate(ctx, prompt, opts)
 }
 
 func buildPrompt(t Turn) string {

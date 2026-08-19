@@ -62,6 +62,22 @@ make worker                # claim and run work, streamed live (Ctrl-C to stop)
 Start more than one `make worker` and they share the queue. Kill one mid-run and
 another reclaims its run once the lease expires.
 
+## Best of N: turn a spread into one reliable answer
+
+A single model call gives you one shot, and on a hard question it is sometimes
+wrong. Run the same question many ways and gate the results, and you get an answer
+you can trust. Needs Ollama:
+
+```
+make consensus
+```
+
+It asks one question six times in parallel (the answers genuinely diverge), then
+two gates pick the winner: a **majority vote** and an **independent judge** that
+works the problem itself. On the built-in question one attempt lands on the wrong
+value and gets outvoted five to one, and the judge agrees. This is the front door
+to evaluating agents: sample, then score.
+
 ## Query it, stream it
 
 `make serve` runs an HTTP server with embedded workers, then open

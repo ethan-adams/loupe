@@ -10,14 +10,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/ethan-adams/loupe/internal/agent"
+	"github.com/ethan-adams/loupe/internal/consensus"
 	"github.com/ethan-adams/loupe/internal/demo"
 	"github.com/ethan-adams/loupe/internal/render"
 	"github.com/ethan-adams/loupe/internal/run"
@@ -46,6 +49,8 @@ func main() {
 		os.Exit(runWorker(os.Args[2:]))
 	case "serve":
 		os.Exit(runServe(os.Args[2:]))
+	case "consensus":
+		os.Exit(runConsensus(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -196,6 +201,80 @@ func runServe(args []string) int {
 	}
 	return 0
 }
+
+const defaultQuestion = "A notebook and a pen cost $2.60 in total. The notebook costs $2.00 more than the pen. How much does the pen cost, in dollars? Answer with just the number."
+
+func runConsensus(args []string) int {
+	fs := flag.NewFlagSet("consensus", flag.ExitOnError)
+	n := fs.Int("n", 5, "how many independent attempts to run")
+	question := fs.String("question", defaultQuestion, "the question to ask")
+	expected := fs.String("expected", "0.30", "the known correct answer, to score the gates (optional)")
+	asJSON := fs.Bool("json", false, "print the raw Result as JSON (for recording the demo)")
+	_ = fs.Parse(args)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	fmt.Fprintf(os.Stderr, "Question: %s\n", *question)
+	fmt.Fprintf(os.Stderr, "Running %d independent attempts (Ollama, non-deterministic)...\n\n", *n)
+
+	res, err := consensus.Run(ctx, *question, *expected, *n)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "consensus: %v\n", err)
+		return 1
+	}
+
+	if *asJSON {
+		b, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(b))
+		return 0
+	}
+
+	for _, a := range res.Attempts {
+		if a.Err != "" {
+			fmt.Printf("  #%d  error: %s\n", a.Index+1, a.Err)
+			continue
+		}
+		fmt.Printf("  #%d  answer: %-8s  %s\n", a.Index+1, a.Answer, truncate(a.Reasoning, 74))
+	}
+
+	fmt.Print("\n  vote:  ")
+	parts := make([]string, 0, len(res.Tally))
+	for _, v := range res.Tally {
+		parts = append(parts, fmt.Sprintf("%s x%d", v.Answer, v.Count))
+	}
+	fmt.Println(strings.Join(parts, "   "))
+	fmt.Printf("  consensus (majority): %s\n", res.Majority)
+	if res.Judge != "" {
+		fmt.Printf("  judge picked:         %s  (%s)\n", res.Judge, res.JudgeWhy)
+	}
+	if res.Expected != "" {
+		fmt.Printf("\n  expected: %s   majority %s   judge %s\n",
+			res.Expected, mark(res.Majority == normalizeForMark(res.Expected)), mark(sameAnswer(res.Judge, res.Expected)))
+	}
+	return 0
+}
+
+func truncate(s string, n int) string {
+	s = strings.ReplaceAll(strings.TrimSpace(s), "\n", " ")
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
+}
+
+func mark(ok bool) string {
+	if ok {
+		return "OK"
+	}
+	return "miss"
+}
+
+func normalizeForMark(s string) string {
+	return strings.NewReplacer("$", "", ",", "", " ", "").Replace(strings.ToLower(strings.TrimSpace(strings.TrimSuffix(s, "."))))
+}
+
+func sameAnswer(a, b string) bool { return normalizeForMark(a) == normalizeForMark(b) }
 
 // stream subscribes a terminal renderer, runs fn, and tears down cleanly.
 func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
