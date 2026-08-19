@@ -131,6 +131,40 @@ func (s *Store) Get(ctx context.Context, runID string) (*run.Run, error) {
 	return s.load(ctx, runID, task)
 }
 
+func (s *Store) List(ctx context.Context, limit int) ([]*run.Run, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.pool.Query(ctx, `SELECT id, task FROM runs ORDER BY created_at DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	type ref struct{ id, task string }
+	var refs []ref
+	for rows.Next() {
+		var r ref
+		if err := rows.Scan(&r.id, &r.task); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		refs = append(refs, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]*run.Run, 0, len(refs))
+	for _, r := range refs {
+		full, err := s.load(ctx, r.id, r.task)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, full)
+	}
+	return out, nil
+}
+
 // load reads a run's status and its ordered steps.
 func (s *Store) load(ctx context.Context, id, task string) (*run.Run, error) {
 	r := &run.Run{ID: id, Task: task}

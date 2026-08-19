@@ -24,6 +24,12 @@ submit: ## Enqueue a run in Postgres (TASK="..." optional). Prints the run id
 worker: ## Drain the Postgres queue, streamed live (ID=name MODEL=scripted|ollama)
 	go run ./cmd/loupe worker $(if $(ID),--id $(ID),) $(if $(MODEL),--model $(MODEL),)
 
+serve: ## Serve GraphQL + playground + live SSE, with embedded workers (needs db-up)
+	go run ./cmd/loupe serve $(if $(MODEL),--model $(MODEL),)
+
+generate: ## Regenerate the GraphQL code from internal/gql/schema.graphqls
+	go run github.com/99designs/gqlgen generate
+
 test: ## Run the tests
 	go test ./...
 

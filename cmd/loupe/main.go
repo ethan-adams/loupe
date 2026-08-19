@@ -12,6 +12,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/ethan-adams/loupe/internal/demo"
 	"github.com/ethan-adams/loupe/internal/render"
 	"github.com/ethan-adams/loupe/internal/run"
+	"github.com/ethan-adams/loupe/internal/server"
 	"github.com/ethan-adams/loupe/internal/store/postgres"
 	"github.com/ethan-adams/loupe/internal/trace"
 	"github.com/ethan-adams/loupe/internal/worker"
@@ -42,6 +44,8 @@ func main() {
 		os.Exit(runSubmit(os.Args[2:]))
 	case "worker":
 		os.Exit(runWorker(os.Args[2:]))
+	case "serve":
+		os.Exit(runServe(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -147,6 +151,52 @@ func runWorker(args []string) int {
 	return 0
 }
 
+func runServe(args []string) int {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	addr := fs.String("addr", ":8080", "listen address")
+	workers := fs.Int("workers", 2, "how many embedded workers drain the queue")
+	modelName := fs.String("model", "scripted", `which model drives runs: "scripted" or "ollama"`)
+	pace := fs.Duration("pace", 200*time.Millisecond, "delay between steps for a live feel; 0 for full speed")
+	_ = fs.Parse(args)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	st, err := postgres.Open(ctx, dsn())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "serve: %v\n", err)
+		return 1
+	}
+	defer st.Close()
+
+	// One hub shared by the embedded workers (which publish) and the SSE
+	// endpoint (which subscribes), so a browser watches a run this process runs.
+	hub := trace.NewHub()
+	build := func(runID, task string) *agent.Agent {
+		ag := demo.NewFixAgent(hub.Stream(runID), *modelName == "ollama")
+		ag.Pace = *pace
+		return ag
+	}
+	for i := 0; i < *workers; i++ {
+		w := worker.New(fmt.Sprintf("serve-%d", i), st, build)
+		go w.Run(ctx, time.Second)
+	}
+
+	srv := &http.Server{Addr: *addr, Handler: server.New(st, hub)}
+	go func() {
+		<-ctx.Done()
+		_ = srv.Shutdown(context.Background())
+	}()
+
+	fmt.Fprintf(os.Stderr, "loupe serving on %s  (playground: http://localhost%s/graphql/playground)\n", *addr, *addr)
+	fmt.Fprintf(os.Stderr, "%d workers draining the queue. Submit runs with `loupe submit`.\n", *workers)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "serve: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 // stream subscribes a terminal renderer, runs fn, and tears down cleanly.
 func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -197,5 +247,9 @@ usage:
   loupe worker [--id name] [--model scripted|ollama] [--once]
        Claim and run work from the Postgres store, streamed live. Run more
        than one to share the queue; a crashed worker's run is resumed.
+
+  loupe serve [--addr :8080] [--workers 2] [--model scripted|ollama]
+       Serve the GraphQL subgraph + playground and a live SSE trace stream,
+       with embedded workers draining the queue. Needs `+"`make db-up`"+`.
 `)
 }

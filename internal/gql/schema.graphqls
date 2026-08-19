@@ -1,0 +1,53 @@
+"""
+Loupe's subgraph: typed, cold-path reads over agent runs.
+
+This is a federation subgraph. Run is an entity (note @key), so a supergraph
+router can reference a run by id and other subgraphs (evals, Draw) can extend it
+with their own fields. The live, high-rate trace does NOT go through GraphQL: it
+streams over Server-Sent Events at /runs/{id}/stream, the same way you would not
+push a 60fps feed through a GraphQL subscription. GraphQL here is only for the
+typed reads: look a run up, list recent runs.
+"""
+type Run @key(fields: "id") {
+  "Run id; also the SSE stream path /runs/<id>/stream."
+  id: ID!
+  task: String!
+  status: RunStatus!
+  "Set only when the run failed."
+  error: String
+  "Every step the run has taken, in order."
+  steps: [Step!]!
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+"One entry in a run's timeline. Only the fields relevant to its kind are set."
+type Step {
+  id: Int!
+  kind: StepKind!
+  thought: String
+  tool: String
+  input: String
+  output: String
+  isError: Boolean!
+  answer: String
+}
+
+enum StepKind {
+  THINK
+  TOOL_CALL
+  OBSERVE
+  FINAL
+}
+
+type Query {
+  "One run by id, with its steps."
+  run(id: ID!): Run
+  "Recent runs, newest first."
+  runs(limit: Int = 20): [Run!]!
+}

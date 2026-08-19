@@ -56,6 +56,27 @@ make worker                # claim and run work, streamed live (Ctrl-C to stop)
 Start more than one `make worker` and they share the queue. Kill one mid-run and
 another reclaims its run once the lease expires.
 
+## Query it, stream it
+
+`make serve` runs an HTTP server with embedded workers, so you can drive runs
+over an API and watch them from a browser:
+
+```
+make db-up
+make serve                 # GraphQL + playground + live stream on :8080
+make submit                # enqueue a run for the server's workers to pick up
+```
+
+- **GraphQL** at `/graphql` (a playground at `/graphql/playground`): typed reads
+  over runs and their steps. It is an Apollo Federation subgraph, so a supergraph
+  router can reference a run by id and other services can extend it.
+- **Live trace** at `GET /runs/<id>/stream`: the run's steps as Server-Sent
+  Events, which a browser reads with a one-line `EventSource`.
+
+The split is deliberate. Typed, low-rate reads go through GraphQL; the high-rate
+step stream does not. It is the same reason you would not push a 60fps feed
+through a GraphQL subscription.
+
 ## What you are looking at
 
 The demo is one run of the agent loop:
@@ -72,10 +93,10 @@ wrong file path is real, and the run only succeeds once the tests actually pass.
 
 Early, and built in the open. Working today: the plan / act / observe loop with
 tool dispatch, a pluggable model (a deterministic script or a real local model),
-a live trace, and a durable, resumable run store (Postgres) that many workers can
-drain at once. On the way:
+a live trace, a durable and resumable run store (Postgres) that many workers can
+drain at once, and a GraphQL federation subgraph plus a live SSE stream over it.
+On the way:
 
-- a GraphQL API over runs, steps, and traces
 - a web control room that renders a run live in the browser
 - horizontal scale on Kubernetes with a load test and numbers
 
@@ -95,6 +116,8 @@ internal/trace   the event stream every step is published to
 internal/render  turns the event stream into a live terminal view
 internal/store   the durable run store: an interface, an in-memory and a Postgres impl
 internal/worker  claims runs from the store, resumes crashed ones
+internal/gql     the GraphQL federation subgraph (gqlgen) over runs and steps
+internal/server  the HTTP surface: GraphQL, a playground, and the SSE trace stream
 internal/demo    wires the pieces into the runnable scenarios
 ```
 

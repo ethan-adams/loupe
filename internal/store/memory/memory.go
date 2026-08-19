@@ -100,6 +100,19 @@ func (s *Store) Get(_ context.Context, runID string) (*run.Run, error) {
 	return cloneRun(&rec.run), nil
 }
 
+func (s *Store) List(_ context.Context, limit int) ([]*run.Run, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if limit <= 0 {
+		limit = 20
+	}
+	out := make([]*run.Run, 0, limit)
+	for i := len(s.order) - 1; i >= 0 && len(out) < limit; i-- {
+		out = append(out, cloneRun(&s.recs[s.order[i]].run))
+	}
+	return out, nil
+}
+
 func cloneRun(r *run.Run) *run.Run {
 	c := *r
 	c.Steps = append([]run.Step(nil), r.Steps...)

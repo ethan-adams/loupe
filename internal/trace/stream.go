@@ -23,12 +23,12 @@ const (
 
 // Event is one thing that happened in a run.
 type Event struct {
-	Type   EventType
-	RunID  string
-	Task   string     // set on RunStarted
-	Status run.Status // set on RunStarted and RunEnded
-	Step   run.Step   // set on StepAdded
-	Error  string     // set on RunEnded when the run failed
+	Type   EventType  `json:"type"`
+	RunID  string     `json:"runId"`
+	Task   string     `json:"task,omitempty"`   // set on RunStarted
+	Status run.Status `json:"status,omitempty"` // set on RunStarted and RunEnded
+	Step   run.Step   `json:"step,omitempty"`   // set on StepAdded
+	Error  string     `json:"error,omitempty"`  // set on RunEnded when the run failed
 }
 
 // Stream fans events out to every subscriber and keeps a history so a late

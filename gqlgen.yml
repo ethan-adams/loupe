@@ -1,0 +1,22 @@
+schema:
+  - internal/gql/schema.graphqls
+
+exec:
+  filename: internal/gql/generated.go
+  package: gql
+
+model:
+  filename: internal/gql/models_gen.go
+  package: gql
+
+resolver:
+  layout: follow-schema
+  dir: internal/gql
+  package: gql
+
+# Run is federated: a future supergraph router references it by @key(id) and
+# other subgraphs (evals, Draw) extend it.
+federation:
+  filename: internal/gql/federation.go
+  package: gql
+  version: 2

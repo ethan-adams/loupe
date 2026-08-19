@@ -40,6 +40,9 @@ type Store interface {
 
 	// Get returns a run with its steps.
 	Get(ctx context.Context, runID string) (*run.Run, error)
+
+	// List returns recent runs (newest first) with their steps, up to limit.
+	List(ctx context.Context, limit int) ([]*run.Run, error)
 }
 
 // NewID returns a short random hex id, used for run ids by every Store so the
