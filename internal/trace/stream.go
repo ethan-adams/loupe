@@ -16,6 +16,7 @@ type EventType string
 
 const (
 	RunStarted EventType = "run_started"
+	RunResumed EventType = "run_resumed"
 	StepAdded  EventType = "step_added"
 	RunEnded   EventType = "run_ended"
 )

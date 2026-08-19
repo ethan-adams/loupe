@@ -19,6 +19,8 @@ func Terminal(w io.Writer, events <-chan trace.Event) {
 		switch e.Type {
 		case trace.RunStarted:
 			fmt.Fprintf(w, "\n▶ run %s\n  task: %s\n", shortID(e.RunID), e.Task)
+		case trace.RunResumed:
+			fmt.Fprintf(w, "\n↻ run %s resumed by another worker\n", shortID(e.RunID))
 		case trace.StepAdded:
 			fmt.Fprintln(w, stepLine(e.Step))
 		case trace.RunEnded:

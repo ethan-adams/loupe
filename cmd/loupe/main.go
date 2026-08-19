@@ -1,7 +1,10 @@
-// Command loupe runs agents and shows every step they take. In M1 it has one
-// subcommand, `demo`, which runs the fix-a-failing-test scenario and streams
-// the trace to your terminal live. Later milestones add a durable run store, a
-// GraphQL trace subgraph, and a web control room.
+// Command loupe runs agents and shows every step they take.
+//
+//	loupe demo         an agent fixes a failing test, streamed live
+//	loupe resume-demo  the same run survives a worker crash and is resumed
+//
+// Later milestones add a Postgres-backed worker (`loupe worker`) and a web
+// control room.
 package main
 
 import (
@@ -14,6 +17,7 @@ import (
 
 	"github.com/ethan-adams/loupe/internal/demo"
 	"github.com/ethan-adams/loupe/internal/render"
+	"github.com/ethan-adams/loupe/internal/run"
 	"github.com/ethan-adams/loupe/internal/trace"
 )
 
@@ -26,6 +30,8 @@ func main() {
 	switch os.Args[1] {
 	case "demo":
 		os.Exit(runDemo(os.Args[2:]))
+	case "resume-demo":
+		os.Exit(runResumeDemo(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -41,25 +47,39 @@ func runDemo(args []string) int {
 	pace := fs.Duration("pace", 300*time.Millisecond, "delay between steps, so the run reads as live; use 0 to go full speed")
 	_ = fs.Parse(args)
 
-	// Ctrl-C ends the run cleanly.
+	return stream(func(ctx context.Context, s *trace.Stream) (*run.Run, error) {
+		return demo.Run(ctx, s, demo.Options{UseOllama: *modelName == "ollama", Pace: *pace})
+	})
+}
+
+func runResumeDemo(args []string) int {
+	fs := flag.NewFlagSet("resume-demo", flag.ExitOnError)
+	pace := fs.Duration("pace", 300*time.Millisecond, "delay between steps, so the run reads as live; use 0 to go full speed")
+	_ = fs.Parse(args)
+
+	fmt.Println("Watch a run survive a crash: worker A works until it commits the fix,")
+	fmt.Println("then loses power. Worker B reclaims the run and finishes it.")
+	return stream(func(ctx context.Context, s *trace.Stream) (*run.Run, error) {
+		return demo.ResumeDemo(ctx, s, *pace)
+	})
+}
+
+// stream subscribes a terminal renderer, runs fn, and tears down cleanly.
+func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	stream := trace.New()
-	events, cancel := stream.Subscribe()
-
+	s := trace.New()
+	events, cancel := s.Subscribe()
 	done := make(chan struct{})
 	go func() {
 		render.Terminal(os.Stdout, events)
 		close(done)
 	}()
 
-	r, err := demo.Run(ctx, stream, demo.Options{
-		UseOllama: *modelName == "ollama",
-		Pace:      *pace,
-	})
+	r, err := fn(ctx, s)
 
-	cancel() // closes the events channel; the renderer drains and returns
+	cancel()
 	<-done
 
 	if err != nil {
@@ -75,9 +95,11 @@ func usage() {
 
 usage:
   loupe demo [--model scripted|ollama] [--pace 300ms]
+       Run an agent that fixes a failing test, streamed step by step.
+       Defaults to an offline scripted model so it works with no setup.
 
-  demo   Run an agent that fixes a failing test, streamed step by step.
-         Defaults to an offline scripted model so it works with no setup.
-         Use --model ollama to drive it with a real local model.
+  loupe resume-demo [--pace 300ms]
+       Run the same work, kill the worker the instant it commits the fix,
+       and watch a second worker reclaim and finish the run.
 `)
 }
