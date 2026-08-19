@@ -78,6 +78,12 @@ works the problem itself. On the built-in question one attempt lands on the wron
 value and gets outvoted five to one, and the judge agrees. This is the front door
 to evaluating agents: sample, then score.
 
+There is also a self-contained visual version at [`web/demo.html`](web/demo.html)
+(open it in a browser) that replays a real recorded run: the attempts stream in,
+one diverges, and the gate picks the answer to trust.
+
+![Best of N: six attempts, one outlier, and a gate that picks the right answer](docs/consensus-demo.png)
+
 ## Query it, stream it
 
 `make serve` runs an HTTP server with embedded workers, then open

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loupe · Best of N</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2a313c;
+    --text: #e6edf3; --muted: #8b98a9; --accent: #d9b45a;
+    --ok: #4bb37a; --warn: #d9b45a; --err: #e5646e; --think: #6ea8fe;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef1f5; --border: #e2e6ec;
+      --text: #16202b; --muted: #5b6675; --accent: #9a7a1f;
+      --ok: #1f8a54; --warn: #9a7a1f; --err: #c23a44; --think: #2f6bd6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  main { max-width: 680px; margin: 0 auto; padding: 2.4rem 1.2rem 4rem; }
+  .brand { font-family: ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
+  .brand b { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: .3rem 0 .2rem; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 1.6rem; }
+
+  .q { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; }
+  .q .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .q .text { margin-top: .35rem; }
+
+  .controls { display: flex; align-items: center; gap: .9rem; margin: 1.2rem 0 .4rem; }
+  button {
+    font: inherit; font-weight: 600; cursor: pointer; color: var(--bg); background: var(--accent);
+    border: none; border-radius: 9px; padding: .55rem 1.1rem;
+  }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { color: var(--muted); font-size: 13px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: 1.1rem; }
+  @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .att {
+    border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px; background: var(--panel);
+    padding: .6rem .7rem; min-height: 84px; opacity: 0; transform: translateY(6px);
+    transition: opacity .3s, transform .3s, border-color .3s;
+  }
+  .att.show { opacity: 1; transform: none; }
+  .att .n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
+  .att .ans { font-family: ui-monospace, Menlo, monospace; font-size: 1.5rem; font-weight: 600; margin: .2rem 0; }
+  .att .why { font-size: 11.5px; color: var(--muted); line-height: 1.35; max-height: 2.7em; overflow: hidden; }
+  .att.win { border-left-color: var(--ok); }
+  .att.out { border-left-color: var(--err); }
+  .att.out .ans { color: var(--err); }
+  .att .chip { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--err); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: .5rem auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .gate { margin-top: 1.6rem; border-top: 1px solid var(--border); padding-top: 1.4rem; opacity: 0; transition: opacity .4s; }
+  .gate.show { opacity: 1; }
+  .gate h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  .gate h2 .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+  .vote { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: .7rem; margin-bottom: .5rem; }
+  .vote .val { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+  .vote .track { height: 12px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+  .vote .fill { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--accent); transition: width .7s ease-out; }
+  .vote.win .fill { background: var(--ok); }
+  .vote.lose .fill { background: var(--err); }
+  .vote .cnt { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: 1.1rem; }
+  @media (max-width: 520px) { .cards2 { grid-template-columns: 1fr; } }
+  .rescard { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: .8rem .9rem; }
+  .rescard .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .rescard .big { font-family: ui-monospace, Menlo, monospace; font-size: 1.7rem; font-weight: 600; margin: .2rem 0; }
+  .rescard .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+  .verdict { margin-top: 1.1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .75rem .95rem; font-weight: 600; }
+  .verdict .ok { color: var(--ok); }
+  .foot { margin-top: 2.2rem; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">l<b>o</b>upe</div>
+  <h1>Best of N</h1>
+  <p class="sub">One hard question, answered many ways by a local model. Watch the answers diverge, then a gate picks the one to trust.</p>
+
+  <div class="q">
+    <div class="label">The question</div>
+    <div class="text" id="q"></div>
+  </div>
+
+  <div class="controls">
+    <button id="run">Run consensus</button>
+    <button id="reset" class="ghost" hidden>Replay</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="gate" id="gate" hidden>
+    <h2><span class="label">Gate 1 · </span> Majority vote</h2>
+    <div id="votes"></div>
+    <div class="cards2">
+      <div class="rescard">
+        <div class="label">Majority</div>
+        <div class="big" id="majority"></div>
+        <div class="note">The answer the most attempts agreed on.</div>
+      </div>
+      <div class="rescard">
+        <div class="label">Gate 2 · Judge</div>
+        <div class="big" id="judge"></div>
+        <div class="note" id="judgeWhy"></div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <p class="foot">This is a real recorded run: one model, one question, six independent tries at temperature 0.7. A single call is sometimes wrong; sampling and gating is how you get an answer you can trust. It is the front door to evaluating agents.</p>
+</main>
+
+<script>
+const DATA = {
+  "question": "A notebook and a pen cost $2.60 in total. The notebook costs $2.00 more than the pen. How much does the pen cost, in dollars? Answer with just the number.",
+  "expected": "0.30",
+  "attempts": [
+    {
+      "index": 0,
+      "reasoning": "Let the pen's cost be x. The notebook is x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives x = 0.30.",
+      "answer": "0.30",
+      "norm": "0.30"
+    },
+    {
+      "index": 1,
+      "reasoning": "Let the pen cost x. Then the notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve for x.",
+      "answer": "0.80",
+      "norm": "0.80"
+    },
+    {
+      "index": 2,
+      "reasoning": "Let the pen cost x dollars. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives 2x + 2.00 = 2.60, so 2x = 0.60, and x = 0.30.",
+      "answer": "0.30",
+      "norm": "0.30"
+    },
+    {
+      "index": 3,
+      "reasoning": "Let the pen cost x dollars. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve equation 2x + 2.00 = 2.60.",
+      "answer": "0.30",
+      "norm": "0.30"
+    },
+    {
+      "index": 4,
+      "reasoning": "Let the pen's cost be x. The notebook costs x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solving gives x = 0.30.",
+      "answer": "0.30",
+      "norm": "0.30"
+    },
+    {
+      "index": 5,
+      "reasoning": "Let the pen's cost be x. The notebook is x + 2.00. Total cost is x + (x + 2.00) = 2.60. Solve equation 2x + 2.00 = 2.60.",
+      "answer": "0.30",
+      "norm": "0.30"
+    }
+  ],
+  "tally": [
+    {
+      "answer": "0.30",
+      "count": 5
+    },
+    {
+      "answer": "0.80",
+      "count": 1
+    }
+  ],
+  "majority": "0.30",
+  "judge": "0.30",
+  "judgeWhy": "Let the pen cost x. Then the notebook costs x + 2.00. Total cost: x + (x + 2.00) = 2.60. Solving gives x = 0.30."
+};
+const $ = (id) => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+$('q').textContent = DATA.question;
+
+function norm(s){ return String(s).toLowerCase().trim().replace(/\.$/,'').replace(/[$, ]/g,''); }
+const MAJ = norm(DATA.majority);
+
+function reset() {
+  $('grid').innerHTML = '';
+  $('gate').hidden = true; $('gate').classList.remove('show');
+  $('votes').innerHTML = '';
+  $('verdict').textContent = '';
+  $('reset').hidden = true;
+  $('status').textContent = '';
+  $('run').disabled = false;
+}
+
+function attemptCard(a, i) {
+  const el = document.createElement('div');
+  el.className = 'att';
+  el.innerHTML = '<div class="n">attempt #' + (i+1) + '</div><div class="spinner"></div>';
+  return el;
+}
+
+function fillCard(el, a) {
+  const outlier = norm(a.answer) !== MAJ;
+  el.classList.add('show', outlier ? 'out' : 'win');
+  el.innerHTML =
+    '<div class="n">attempt #' + (a.index+1) + (outlier ? ' <span class="chip">outlier</span>' : '') + '</div>' +
+    '<div class="ans">' + a.answer + '</div>' +
+    '<div class="why">' + a.reasoning + '</div>';
+}
+
+async function run() {
+  reset();
+  $('run').disabled = true;
+  $('status').textContent = 'running ' + DATA.attempts.length + ' attempts in parallel...';
+
+  const cards = DATA.attempts.map((a, i) => {
+    const el = attemptCard(a, i);
+    $('grid').appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    return el;
+  });
+
+  const step = reduce ? 0 : 620;
+  for (let i = 0; i < DATA.attempts.length; i++) {
+    await wait(step);
+    fillCard(cards[i], DATA.attempts[i]);
+  }
+
+  await wait(reduce ? 0 : 500);
+  $('status').textContent = 'answers disagree. gating...';
+  renderGate();
+  $('reset').hidden = false;
+  $('status').textContent = '';
+}
+
+function renderGate() {
+  const gate = $('gate');
+  gate.hidden = false;
+  requestAnimationFrame(() => gate.classList.add('show'));
+
+  const max = Math.max(...DATA.tally.map(v => v.count));
+  const votes = $('votes');
+  votes.innerHTML = '';
+  DATA.tally.forEach(v => {
+    const win = norm(v.answer) === MAJ;
+    const row = document.createElement('div');
+    row.className = 'vote ' + (win ? 'win' : 'lose');
+    const pct = Math.round(100 * v.count / max);
+    row.innerHTML =
+      '<span class="val">' + v.answer + '</span>' +
+      '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
+      '<span class="cnt">' + v.count + (v.count === 1 ? ' vote' : ' votes') + '</span>';
+    votes.appendChild(row);
+  });
+
+  $('majority').textContent = DATA.majority;
+  $('judge').textContent = DATA.judge;
+  $('judgeWhy').textContent = DATA.judgeWhy;
+
+  const right = DATA.expected && norm(DATA.expected) === MAJ;
+  $('verdict').innerHTML = DATA.expected
+    ? 'Correct answer: <span class="mono">' + DATA.expected + '</span>. Both gates agreed on it ' +
+      (right ? '<span class="ok">&#10003;</span>' : '') + ' — even though one attempt did not.'
+    : 'Both gates agreed on <span class="mono">' + DATA.majority + '</span>.';
+}
+
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+$('run').onclick = run;
+$('reset').onclick = run;
+if (location.search.includes('autoplay')) run();
+</script>
+</body>
+</html>
