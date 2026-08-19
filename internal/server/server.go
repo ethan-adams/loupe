@@ -6,6 +6,7 @@
 package server
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,14 +16,40 @@ import (
 	"github.com/ethan-adams/loupe/internal/trace"
 )
 
+//go:embed ui.html
+var uiHTML []byte
+
 // New returns the HTTP handler for the whole surface.
 func New(st store.Store, hub *trace.Hub) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", gql.NewServer(st))
 	mux.Handle("/graphql/playground", gql.PlaygroundHandler())
 	mux.HandleFunc("GET /runs/{id}/stream", streamRun(hub))
-	mux.HandleFunc("GET /{$}", index)
+	mux.HandleFunc("POST /runs", enqueue(st))
+	mux.HandleFunc("GET /{$}", ui)
 	return mux
+}
+
+// enqueue submits a new run. The body may be {"task": "..."}; an empty body
+// enqueues the default fix-a-failing-test task. It responds with {"id": "..."}.
+func enqueue(st store.Store) http.HandlerFunc {
+	const defaultTask = "Make the failing test in this repo pass."
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Task string `json:"task"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body) // empty body is fine
+		if body.Task == "" {
+			body.Task = defaultTask
+		}
+		id, err := st.Enqueue(r.Context(), body.Task)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
 }
 
 // streamRun streams one run's trace events as they happen. It replays the run's
@@ -66,22 +93,9 @@ func streamRun(hub *trace.Hub) http.HandlerFunc {
 	}
 }
 
-func index(w http.ResponseWriter, _ *http.Request) {
+// ui serves the control room: a self-contained page that lists runs, starts new
+// ones, and renders a run's steps live as they stream in.
+func ui(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(indexPage))
+	_, _ = w.Write(uiHTML)
 }
-
-const indexPage = `<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Loupe</title>
-<style>body{font:15px/1.6 ui-monospace,Menlo,monospace;max-width:640px;margin:3rem auto;padding:0 1rem;color-scheme:light dark}code{opacity:.85}</style>
-</head>
-<body>
-  <h1>Loupe</h1>
-  <p>Run an AI agent and watch every step it takes, live.</p>
-  <ul>
-    <li><a href="/graphql/playground">GraphQL playground</a> &mdash; typed reads over runs</li>
-    <li><code>GET /runs/&lt;id&gt;/stream</code> &mdash; live trace over Server-Sent Events</li>
-  </ul>
-</body>
-</html>`

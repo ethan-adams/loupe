@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loupe</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --border: #2a313c;
+    --text: #e6edf3;
+    --muted: #8b98a9;
+    --accent: #d9b45a;      /* gold */
+    --running: #d9b45a;
+    --ok: #4bb37a;
+    --err: #e5646e;
+    --think: #6ea8fe;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --border: #dfe3e8;
+      --text: #1a1f27; --muted: #5b6675; --accent: #9a7a1f;
+      --running: #9a7a1f; --ok: #1f8a54; --err: #c23a44; --think: #2f6bd6;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: grid; grid-template-rows: auto 1fr; height: 100vh;
+  }
+  header {
+    display: flex; align-items: baseline; gap: .6rem;
+    padding: .8rem 1.1rem; border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  header .mark { font-weight: 700; letter-spacing: .3px; }
+  header .mark b { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: 280px 1fr; min-height: 0; }
+
+  /* sidebar */
+  aside { border-right: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  aside .top { padding: .8rem; border-bottom: 1px solid var(--border); }
+  button.new {
+    width: 100%; padding: .55rem .8rem; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid var(--accent); background: transparent; color: var(--text); font: inherit; font-weight: 600;
+  }
+  button.new:hover { background: var(--panel-2); }
+  .runs { overflow-y: auto; padding: .4rem; }
+  .runitem {
+    display: flex; align-items: center; gap: .5rem; padding: .5rem .55rem; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .runitem:hover { background: var(--panel-2); }
+  .runitem.active { background: var(--panel-2); border-color: var(--border); }
+  .runitem .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+  .runitem .rtask { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .runitem .rid { color: var(--muted); font-size: 11px; font-family: ui-monospace, Menlo, monospace; }
+
+  /* main run view */
+  section { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+  .runhead { padding: .9rem 1.2rem; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .runhead .task { font-size: 15px; font-weight: 600; margin-bottom: .35rem; }
+  .runhead .meta { display: flex; align-items: center; gap: .7rem; color: var(--muted); font-size: 12px; }
+  .pill { padding: .12rem .55rem; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .4px; border: 1px solid var(--border); }
+  .pill.PENDING { color: var(--muted); }
+  .pill.RUNNING { color: var(--running); border-color: var(--running); }
+  .pill.SUCCEEDED { color: var(--ok); border-color: var(--ok); }
+  .pill.FAILED { color: var(--err); border-color: var(--err); }
+  .live { color: var(--running); font-size: 11px; display: none; }
+  .live.on { display: inline; }
+  .live .blip { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--running); margin-right: 4px; animation: pulse 1.1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+
+  .timeline { overflow-y: auto; padding: 1rem 1.2rem; }
+  .empty { color: var(--muted); margin-top: 2rem; text-align: center; }
+
+  .card {
+    border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius);
+    background: var(--panel); padding: .55rem .75rem; margin-bottom: .55rem; cursor: pointer;
+    animation: rise .18s ease-out;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .card .line { display: flex; align-items: baseline; gap: .5rem; }
+  .card .ic { flex: none; }
+  .card .label { font-weight: 600; }
+  .card .summary { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .details { display: none; margin-top: .5rem; }
+  .card.open .details { display: block; }
+  .card .details pre {
+    margin: 0; padding: .55rem .65rem; background: var(--panel-2); border-radius: 8px;
+    font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; overflow-x: auto;
+  }
+  .card.think { border-left-color: var(--think); }
+  .card.think .summary { font-style: italic; }
+  .card.call  { border-left-color: var(--accent); }
+  .card.observe.ok { border-left-color: var(--ok); }
+  .card.observe.err { border-left-color: var(--err); }
+  .card.observe.err .label { color: var(--err); }
+  .card.final { border-left-color: var(--ok); background: var(--panel-2); }
+  .card .tool { font-family: ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+  <header>
+    <span class="mark">l<b>o</b>upe</span>
+    <span class="sub">watch an agent work, step by step</span>
+  </header>
+  <main>
+    <aside>
+      <div class="top"><button class="new" id="new">+ New run</button></div>
+      <div class="runs" id="runs"></div>
+    </aside>
+    <section>
+      <div class="runhead">
+        <div class="task" id="task">Select a run, or start a new one</div>
+        <div class="meta">
+          <span class="pill" id="status"></span>
+          <span class="rid" id="rid"></span>
+          <span class="live" id="live"><span class="blip"></span>live</span>
+        </div>
+      </div>
+      <div class="timeline" id="timeline"><div class="empty">No run selected.</div></div>
+    </section>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let currentId = null, es = null, seen = new Set();
+
+async function gql(query, variables) {
+  const res = await fetch('/graphql', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  const j = await res.json();
+  return j.data;
+}
+
+function dotColor(status) {
+  return { PENDING: 'var(--muted)', RUNNING: 'var(--running)', SUCCEEDED: 'var(--ok)', FAILED: 'var(--err)' }[status] || 'var(--muted)';
+}
+
+async function loadRuns() {
+  const d = await gql(`{ runs(limit: 30) { id task status } }`);
+  const list = $('runs');
+  list.innerHTML = '';
+  for (const r of d.runs) {
+    const el = document.createElement('div');
+    el.className = 'runitem' + (r.id === currentId ? ' active' : '');
+    el.innerHTML = `<span class="dot"></span><span class="rtask"></span><span class="rid"></span>`;
+    el.querySelector('.dot').style.background = dotColor(r.status);
+    el.querySelector('.rtask').textContent = r.task;
+    el.querySelector('.rid').textContent = r.id.slice(0, 6);
+    el.onclick = () => selectRun(r.id);
+    list.appendChild(el);
+  }
+  return d.runs;
+}
+
+function setStatus(status) {
+  const p = $('status');
+  p.className = 'pill ' + (status || '');
+  p.textContent = status || '';
+}
+
+function setLive(on) { $('live').className = 'live' + (on ? ' on' : ''); }
+
+function clearTimeline() {
+  seen = new Set();
+  $('timeline').innerHTML = '';
+}
+
+function summarize(s) {
+  const oneLine = (t) => (t || '').split('\n')[0];
+  switch (s.kind) {
+    case 'THINK': return { label: 'thinking', ic: '🧠', text: s.thought, cls: 'think', details: s.thought };
+    case 'TOOL_CALL': return { label: 'call ' + s.tool, ic: '⚙', text: s.input || '', cls: 'call', details: s.input, tool: true };
+    case 'OBSERVE': return { label: s.tool, ic: s.isError ? '✗' : '✓', text: oneLine(s.output), cls: 'observe ' + (s.isError ? 'err' : 'ok'), details: s.output, tool: true };
+    case 'FINAL': return { label: 'answer', ic: '★', text: s.answer, cls: 'final', details: s.answer };
+    default: return { label: s.kind, ic: '?', text: '', cls: '', details: '' };
+  }
+}
+
+function addStep(s) {
+  if (seen.has(s.id)) return;
+  seen.add(s.id);
+  const v = summarize(s);
+  const card = document.createElement('div');
+  card.className = 'card ' + v.cls;
+  const label = document.createElement('span');
+  label.className = 'label' + (v.tool ? ' tool' : '');
+  label.textContent = v.label;
+  const summary = document.createElement('span');
+  summary.className = 'summary';
+  summary.textContent = v.text || '';
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.innerHTML = `<span class="ic">${v.ic}</span>`;
+  line.appendChild(label);
+  line.appendChild(summary);
+  card.appendChild(line);
+  if (v.details) {
+    const det = document.createElement('div');
+    det.className = 'details';
+    const pre = document.createElement('pre');
+    pre.textContent = v.details;
+    det.appendChild(pre);
+    card.appendChild(det);
+    card.onclick = () => card.classList.toggle('open');
+  }
+  const tl = $('timeline');
+  tl.appendChild(card);
+  tl.scrollTop = tl.scrollHeight;
+}
+
+async function selectRun(id) {
+  if (es) { es.close(); es = null; }
+  currentId = id;
+  setLive(false);
+  await loadRuns(); // refresh active highlight + statuses
+
+  const d = await gql(`query($id: ID!){ run(id: $id) { id task status steps { id kind thought tool input output isError answer } } }`, { id });
+  const r = d.run;
+  if (!r) return;
+  $('task').textContent = r.task;
+  $('rid').textContent = r.id;
+  setStatus(r.status);
+  clearTimeline();
+  for (const s of r.steps) addStep(s);
+  if (!r.steps.length) $('timeline').innerHTML = '<div class="empty">Waiting for the first step...</div>';
+
+  if (r.status === 'RUNNING' || r.status === 'PENDING') openStream(id);
+}
+
+function openStream(id) {
+  setLive(true);
+  es = new EventSource(`/runs/${id}/stream`);
+  es.onmessage = (ev) => {
+    const e = JSON.parse(ev.data);
+    if (e.type === 'run_started') { $('task').textContent = e.task || $('task').textContent; setStatus(e.status); }
+    else if (e.type === 'step_added') {
+      const em = $('timeline').querySelector('.empty');
+      if (em) em.remove();
+      addStep(e.step);
+    }
+    else if (e.type === 'run_ended') {
+      setStatus(e.status);
+      setLive(false);
+      es.close(); es = null; // close so the browser does not auto-reconnect
+      loadRuns();
+    }
+  };
+  es.onerror = () => { /* transient; EventSource retries unless we closed it */ };
+}
+
+$('new').onclick = async () => {
+  const res = await fetch('/runs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const { id } = await res.json();
+  await loadRuns();
+  selectRun(id);
+};
+
+async function init() {
+  const runs = await loadRuns();
+  if (runs && runs.length && !currentId) selectRun(runs[0].id);
+}
+init();
+</script>
+</body>
+</html>
