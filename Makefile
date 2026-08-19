@@ -12,6 +12,9 @@ demo-ollama: ## The demo driven by a real local model (needs `ollama serve` + a 
 demo-resume: ## Watch a run survive a worker crash: A commits the fix, dies, B resumes it
 	go run ./cmd/loupe resume-demo
 
+fix-demo: ## A real agent fixes a real failing test on disk, running python (MODEL=scripted|ollama)
+	go run ./cmd/loupe fix-demo $(if $(MODEL),--model $(MODEL),)
+
 code-consensus: ## Solve a real coding problem N ways, run each against tests, ship one that passes (needs Ollama)
 	go run ./cmd/loupe code-consensus $(if $(N),--n $(N),)
 

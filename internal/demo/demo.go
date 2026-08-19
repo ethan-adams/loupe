@@ -121,6 +121,48 @@ func NewFixAgent(stream *trace.Stream, useOllama bool) *agent.Agent {
 	return agent.New(m, buildRegistry(repo), stream)
 }
 
+// FixOnDisk runs the fix-a-failing-test scenario against a real directory: the
+// tools read and write real files and run_tests actually runs Python. This is
+// the durable, non-toy version of the demo, and the basis for a real coding
+// agent. Pass useOllama to drive it with a local model instead of the script.
+func FixOnDisk(ctx context.Context, stream *trace.Stream, dir string, useOllama bool, pace time.Duration) (*run.Run, error) {
+	repo := tools.NewDiskRepo(dir)
+	if err := repo.SeedBuggyPython(); err != nil {
+		return nil, err
+	}
+	reg := tools.NewDiskRegistry(repo)
+
+	var m model.Model
+	if useOllama {
+		m = model.NewOllama(&http.Client{Timeout: 120 * time.Second})
+	} else {
+		m = scriptedCalcFix()
+	}
+	ag := agent.New(m, reg, stream)
+	ag.Pace = pace
+	return ag.Run(ctx, "run-fix-disk", Task)
+}
+
+// scriptedCalcFix mirrors scriptedFix for the on-disk calc module, so the disk
+// demo also runs deterministically with no model server.
+func scriptedCalcFix() model.Model {
+	fixed := "calc.py\ndef add(a, b):\n    return a + b\n"
+	return model.NewMock("scripted-fix", []model.Decision{
+		{Thought: "Let me run the tests to see what is failing.",
+			ToolCall: &model.ToolCall{Name: "run_tests"}},
+		{Thought: "A test is failing. Let me open the source file.",
+			ToolCall: &model.ToolCall{Name: "read_file", Input: "cal.py"}},
+		{Thought: "Wrong path. Reading calc.py instead.",
+			ToolCall: &model.ToolCall{Name: "read_file", Input: "calc.py"}},
+		{Thought: "The bug is 'a - b'; it should be 'a + b'. Writing the fix.",
+			ToolCall: &model.ToolCall{Name: "write_file", Input: fixed}},
+		{Thought: "Re-running the tests to confirm the fix.",
+			ToolCall: &model.ToolCall{Name: "run_tests"}},
+		{Thought: "The tests pass.",
+			Final: "Fixed calc.py: add() now returns a + b, so the test passes."},
+	})
+}
+
 func buildRegistry(repo *tools.Repo) *tools.Registry {
 	return tools.NewRegistry(
 		tools.NewListFiles(repo),

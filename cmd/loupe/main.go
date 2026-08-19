@@ -44,6 +44,8 @@ func main() {
 		os.Exit(runDemo(os.Args[2:]))
 	case "resume-demo":
 		os.Exit(runResumeDemo(os.Args[2:]))
+	case "fix-demo":
+		os.Exit(runFixDemo(os.Args[2:]))
 	case "submit":
 		os.Exit(runSubmit(os.Args[2:]))
 	case "worker":
@@ -372,6 +374,31 @@ func runEval(args []string) int {
 	return 0
 }
 
+func runFixDemo(args []string) int {
+	fs := flag.NewFlagSet("fix-demo", flag.ExitOnError)
+	modelName := fs.String("model", "scripted", `which model drives the agent: "scripted" or "ollama"`)
+	pace := fs.Duration("pace", 300*time.Millisecond, "delay between steps; 0 for full speed")
+	dir := fs.String("dir", "", "working directory (default: a fresh temp dir)")
+	_ = fs.Parse(args)
+
+	workdir := *dir
+	if workdir == "" {
+		d, err := os.MkdirTemp("", "loupe-fix-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "fix-demo: %v\n", err)
+			return 1
+		}
+		workdir = d
+	}
+	fmt.Printf("A real agent, real files on disk. Working dir: %s\n", workdir)
+
+	code := stream(func(ctx context.Context, s *trace.Stream) (*run.Run, error) {
+		return demo.FixOnDisk(ctx, s, workdir, *modelName == "ollama", *pace)
+	})
+	fmt.Printf("The fixed file is real: %s/calc.py\n", workdir)
+	return code
+}
+
 // stream subscribes a terminal renderer, runs fn, and tears down cleanly.
 func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -415,6 +442,10 @@ usage:
   loupe resume-demo [--pace 300ms]
        Kill the worker the instant it commits the fix and watch a second
        worker reclaim and finish the run. In-memory, no setup.
+
+  loupe fix-demo [--model scripted|ollama] [--dir path]
+       A real agent fixes a real failing test on disk, running python3.
+       The fixed file is left on disk for you to inspect.
 
   loupe submit [--task "..."]
        Enqueue a run in the Postgres store (needs `+"`make db-up`"+`). Prints its id.

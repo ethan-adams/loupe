@@ -168,9 +168,16 @@ store is the ceiling. The numbers and the honest bottleneck read are in
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): the pieces, the run lifecycle, how resume works.
 - [`DECISIONS.md`](DECISIONS.md): the real tradeoffs and why each call went the way it did.
 
-One honest limit today: the demo's tools keep their state in memory, so a run
-resumed in a different process starts that state fresh. The run, its steps, and
-the resume are durable; durable tools (a real repo on disk) are the next step.
+The quick browser demo uses an in-memory repo for zero setup. For the real thing,
+`make fix-demo` runs the same loop against real files on disk, with `run_tests`
+actually running `python3`: the agent lists files, reads the source, writes a fix,
+and the test really passes. Because those edits live on disk, they are durable, so
+a resumed run picks up correct world state (unlike the in-memory toy repo).
+
+```
+make fix-demo               # scripted, no model server
+make fix-demo MODEL=ollama  # a real local model fixes the real file
+```
 
 ## Layout
 
