@@ -31,6 +31,31 @@ Drive it with a real local model instead of the built-in script (needs
 make demo-ollama
 ```
 
+## Runs survive a crash
+
+A run is durable: every step is committed as it happens, so a run that dies part
+way through is picked up by another worker and finished from where it stopped,
+without redoing the work that already succeeded. Watch it, no setup required:
+
+```
+make demo-resume
+```
+
+One worker takes the task, fixes the bug, and loses power the instant the fix is
+committed. Its claim expires, a second worker reclaims the same run, runs the
+tests (which pass, because the fix is real), and finishes.
+
+The durable store behind that is Postgres. To run it for real:
+
+```
+make db-up                 # start Postgres in Docker
+make submit                # enqueue a run, prints its id
+make worker                # claim and run work, streamed live (Ctrl-C to stop)
+```
+
+Start more than one `make worker` and they share the queue. Kill one mid-run and
+another reclaims its run once the lease expires.
+
 ## What you are looking at
 
 The demo is one run of the agent loop:
@@ -45,25 +70,32 @@ wrong file path is real, and the run only succeeds once the tests actually pass.
 
 ## Status
 
-Early. This milestone is the walking skeleton: the loop, tool dispatch, a
-pluggable model (a deterministic script or a local model), and a live trace to
-your terminal. On the way:
+Early, and built in the open. Working today: the plan / act / observe loop with
+tool dispatch, a pluggable model (a deterministic script or a real local model),
+a live trace, and a durable, resumable run store (Postgres) that many workers can
+drain at once. On the way:
 
-- a durable, resumable run store so a run survives a crash and picks up where it left off
 - a GraphQL API over runs, steps, and traces
 - a web control room that renders a run live in the browser
-- horizontal scale with a load test and numbers
+- horizontal scale on Kubernetes with a load test and numbers
+
+One honest limit today: the demo's tools keep their state in memory, so a run
+resumed in a different process starts that state fresh. The run, its steps, and
+the resume are durable; durable tools (a real repo on disk) come with the coding
+sandbox milestone.
 
 ## Layout
 
 ```
 cmd/loupe        the command line entry point
-internal/agent   the plan / act / observe loop (the run engine)
+internal/agent   the plan / act / observe loop (the run engine), resumable
 internal/model   the model boundary: a scripted model and an Ollama model
 internal/tools   the agent's tools and the demo repo they act on
 internal/trace   the event stream every step is published to
 internal/render  turns the event stream into a live terminal view
-internal/demo    wires the pieces into the fix-a-failing-test scenario
+internal/store   the durable run store: an interface, an in-memory and a Postgres impl
+internal/worker  claims runs from the store, resumes crashed ones
+internal/demo    wires the pieces into the runnable scenarios
 ```
 
 ## License

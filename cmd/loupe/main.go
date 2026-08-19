@@ -2,9 +2,10 @@
 //
 //	loupe demo         an agent fixes a failing test, streamed live
 //	loupe resume-demo  the same run survives a worker crash and is resumed
+//	loupe submit       enqueue a run in the Postgres store
+//	loupe worker       drain runs from the Postgres store, streamed live
 //
-// Later milestones add a Postgres-backed worker (`loupe worker`) and a web
-// control room.
+// A later milestone adds a web control room over the same stream.
 package main
 
 import (
@@ -15,11 +16,16 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/ethan-adams/loupe/internal/agent"
 	"github.com/ethan-adams/loupe/internal/demo"
 	"github.com/ethan-adams/loupe/internal/render"
 	"github.com/ethan-adams/loupe/internal/run"
+	"github.com/ethan-adams/loupe/internal/store/postgres"
 	"github.com/ethan-adams/loupe/internal/trace"
+	"github.com/ethan-adams/loupe/internal/worker"
 )
+
+const defaultDSN = "postgres://loupe:loupe@localhost:5433/loupe?sslmode=disable"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -32,6 +38,10 @@ func main() {
 		os.Exit(runDemo(os.Args[2:]))
 	case "resume-demo":
 		os.Exit(runResumeDemo(os.Args[2:]))
+	case "submit":
+		os.Exit(runSubmit(os.Args[2:]))
+	case "worker":
+		os.Exit(runWorker(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -64,6 +74,79 @@ func runResumeDemo(args []string) int {
 	})
 }
 
+func runSubmit(args []string) int {
+	fs := flag.NewFlagSet("submit", flag.ExitOnError)
+	task := fs.String("task", demo.Task, "the task to enqueue")
+	_ = fs.Parse(args)
+
+	ctx := context.Background()
+	st, err := postgres.Open(ctx, dsn())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "submit: %v\n", err)
+		return 1
+	}
+	defer st.Close()
+
+	id, err := st.Enqueue(ctx, *task)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "submit: %v\n", err)
+		return 1
+	}
+	fmt.Println(id)
+	return 0
+}
+
+func runWorker(args []string) int {
+	fs := flag.NewFlagSet("worker", flag.ExitOnError)
+	id := fs.String("id", "worker-1", "worker id, shown in traces")
+	modelName := fs.String("model", "scripted", `which model drives the agent: "scripted" or "ollama"`)
+	pace := fs.Duration("pace", 200*time.Millisecond, "delay between steps for a live feel; 0 for full speed")
+	once := fs.Bool("once", false, "process at most one run, then exit")
+	_ = fs.Parse(args)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	st, err := postgres.Open(ctx, dsn())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "worker: %v\n", err)
+		return 1
+	}
+	defer st.Close()
+
+	s := trace.New()
+	events, cancel := s.Subscribe()
+	done := make(chan struct{})
+	go func() {
+		render.Terminal(os.Stdout, events)
+		close(done)
+	}()
+
+	build := func(runID, task string) *agent.Agent {
+		ag := demo.NewFixAgent(s, *modelName == "ollama")
+		ag.Pace = *pace
+		return ag
+	}
+	w := worker.New(*id, st, build)
+
+	if *once {
+		worked, err := w.Once(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\nworker: %v\n", err)
+		}
+		if !worked {
+			fmt.Fprintln(os.Stderr, "worker: nothing to do")
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "worker %s draining the queue (Ctrl-C to stop)\n", *id)
+		_ = w.Run(ctx, time.Second)
+	}
+
+	cancel()
+	<-done
+	return 0
+}
+
 // stream subscribes a terminal renderer, runs fn, and tears down cleanly.
 func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -90,16 +173,29 @@ func stream(fn func(context.Context, *trace.Stream) (*run.Run, error)) int {
 	return 0
 }
 
+func dsn() string {
+	if v := os.Getenv("LOUPE_DATABASE_URL"); v != "" {
+		return v
+	}
+	return defaultDSN
+}
+
 func usage() {
 	fmt.Fprint(os.Stderr, `loupe - run agents and watch every step they take
 
 usage:
   loupe demo [--model scripted|ollama] [--pace 300ms]
        Run an agent that fixes a failing test, streamed step by step.
-       Defaults to an offline scripted model so it works with no setup.
 
   loupe resume-demo [--pace 300ms]
-       Run the same work, kill the worker the instant it commits the fix,
-       and watch a second worker reclaim and finish the run.
+       Kill the worker the instant it commits the fix and watch a second
+       worker reclaim and finish the run. In-memory, no setup.
+
+  loupe submit [--task "..."]
+       Enqueue a run in the Postgres store (needs `+"`make db-up`"+`). Prints its id.
+
+  loupe worker [--id name] [--model scripted|ollama] [--once]
+       Claim and run work from the Postgres store, streamed live. Run more
+       than one to share the queue; a crashed worker's run is resumed.
 `)
 }

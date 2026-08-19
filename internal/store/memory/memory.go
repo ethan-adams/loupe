@@ -26,6 +26,8 @@ type Store struct {
 	now   func() time.Time
 }
 
+var _ store.Store = (*Store)(nil)
+
 // New returns an empty store using time.Now as its clock.
 func New() *Store { return NewWithClock(time.Now) }
 

@@ -105,6 +105,22 @@ func ResumeDemo(ctx context.Context, stream *trace.Stream, pace time.Duration) (
 	return out, err
 }
 
+// NewFixAgent builds a fresh agent for the fix-a-failing-test scenario, with a
+// new repo each call. The worker command uses it to turn each claimed run into
+// an agent. Note the toy repo lives in memory, so the tool's world state is not
+// yet durable across processes; the run, its steps, and resume are. Durable
+// tools (a real repo on disk) are a later milestone.
+func NewFixAgent(stream *trace.Stream, useOllama bool) *agent.Agent {
+	repo := tools.NewBuggyRepo()
+	var m model.Model
+	if useOllama {
+		m = model.NewOllama(&http.Client{Timeout: 120 * time.Second})
+	} else {
+		m = scriptedFix()
+	}
+	return agent.New(m, buildRegistry(repo), stream)
+}
+
 func buildRegistry(repo *tools.Repo) *tools.Registry {
 	return tools.NewRegistry(
 		tools.NewListFiles(repo),

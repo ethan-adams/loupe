@@ -12,6 +12,18 @@ demo-ollama: ## The demo driven by a real local model (needs `ollama serve` + a 
 demo-resume: ## Watch a run survive a worker crash: A commits the fix, dies, B resumes it
 	go run ./cmd/loupe resume-demo
 
+db-up: ## Start the Postgres run store in Docker
+	docker compose up -d db
+
+db-down: ## Stop and remove the Postgres run store
+	docker compose down -v
+
+submit: ## Enqueue a run in Postgres (TASK="..." optional). Prints the run id
+	go run ./cmd/loupe submit $(if $(TASK),--task "$(TASK)",)
+
+worker: ## Drain the Postgres queue, streamed live (ID=name MODEL=scripted|ollama)
+	go run ./cmd/loupe worker $(if $(ID),--id $(ID),) $(if $(MODEL),--model $(MODEL),)
+
 test: ## Run the tests
 	go test ./...
 
