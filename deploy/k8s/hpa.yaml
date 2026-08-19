@@ -1,0 +1,21 @@
+# Scale the Loupe deployment out when its pods get busy, which under load means
+# the workers are saturated draining the queue. Needs metrics-server (see the
+# `make metrics-server` target).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: loupe
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: loupe
+  minReplicas: 1
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

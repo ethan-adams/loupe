@@ -30,6 +30,38 @@ serve: ## Serve GraphQL + playground + live SSE, with embedded workers (needs db
 generate: ## Regenerate the GraphQL code from internal/gql/schema.graphqls
 	go run github.com/99designs/gqlgen generate
 
+# --- Kubernetes on kind: the full thing on a local cluster ---
+IMAGE ?= loupe:dev
+CLUSTER ?= loupe
+
+image: ## Build the container image and load it into the kind cluster
+	docker build -t $(IMAGE) .
+	kind load docker-image $(IMAGE) --name $(CLUSTER)
+
+up: ## Create the kind cluster and deploy Postgres + Loupe (open http://localhost:8899)
+	kind create cluster --name $(CLUSTER) --config deploy/kind.yaml
+	$(MAKE) image
+	kubectl apply -f deploy/k8s/postgres.yaml
+	kubectl rollout status deploy/loupe-db --timeout=180s
+	kubectl apply -f deploy/k8s/loupe.yaml
+	kubectl rollout status deploy/loupe --timeout=180s
+	@echo "Loupe is up at http://localhost:8899"
+
+down: ## Delete the kind cluster
+	kind delete cluster --name $(CLUSTER)
+
+metrics-server: ## Install a kind-friendly metrics-server (needed for the HPA)
+	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+	kubectl patch deploy metrics-server -n kube-system --type=json \
+		-p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+	kubectl rollout status deploy/metrics-server -n kube-system --timeout=180s
+
+hpa: metrics-server ## Install metrics-server and apply the autoscaler
+	kubectl apply -f deploy/k8s/hpa.yaml
+
+loadtest: ## Fire the k6 load test at the cluster (VUS, DURATION, BASE_URL)
+	k6 run loadtest/load.js
+
 test: ## Run the tests
 	go test ./...
 

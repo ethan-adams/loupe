@@ -1,0 +1,50 @@
+# The Loupe service: each pod serves the HTTP surface (control room, GraphQL, SSE)
+# and runs a handful of embedded workers that drain the shared Postgres queue.
+# Scaling replicas scales the workers, which is how the system takes on more load.
+# CPU requests/limits are set so the HorizontalPodAutoscaler has something to
+# scale on.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loupe
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: loupe }
+  template:
+    metadata:
+      labels: { app: loupe }
+    spec:
+      containers:
+        - name: loupe
+          image: loupe:dev
+          imagePullPolicy: IfNotPresent
+          args: ["serve", "--addr", ":8080", "--workers", "4", "--pace", "0"]
+          env:
+            - name: LOUPE_DATABASE_URL
+              value: postgres://loupe:loupe@loupe-db:5432/loupe?sslmode=disable
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { cpu: "1", memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loupe
+spec:
+  type: NodePort
+  selector: { app: loupe }
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30899

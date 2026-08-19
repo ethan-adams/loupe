@@ -1,0 +1,6 @@
+.git
+bin
+*.png
+*.md
+loadtest
+deploy

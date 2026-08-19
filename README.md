@@ -2,6 +2,12 @@
 
 **Run an AI agent and watch every step it takes, live.**
 
+![The Loupe control room: a run's steps streaming in as the agent works](docs/control-room.png)
+
+> One queue, stateless workers: 4 replicas take **6x the throughput of 1** (27 to
+> 162 completed runs/sec) and hold p95 latency at **1.2s** where a single replica
+> hits 7.8s. Every run is durable and resumable, and streams live to the browser.
+
 An agent normally works behind a curtain. You give it a task, it thinks, calls
 tools, makes mistakes, retries, and hands you a final answer, and you never get
 to see what happened in between. Loupe removes the curtain. Every step the agent
@@ -93,20 +99,31 @@ The demo is one run of the agent loop:
 The bug is a real one (`add()` subtracts instead of adds), the recovery from a
 wrong file path is real, and the run only succeeds once the tests actually pass.
 
-## Status
+## On Kubernetes
 
-Early, and built in the open. Working today: the plan / act / observe loop with
-tool dispatch, a pluggable model (a deterministic script or a real local model),
-a live trace, a durable and resumable run store (Postgres) that many workers can
-drain at once, a GraphQL federation subgraph plus a live SSE stream over it, and
-a web control room that renders a run live in the browser. On the way:
+The whole thing runs on a local `kind` cluster with one command, and there is a
+load test with real numbers:
 
-- horizontal scale on Kubernetes with a load test and numbers
+```
+make up                    # 3-node kind cluster + Postgres + Loupe, on localhost:8899
+make hpa                   # metrics-server + a CPU autoscaler (optional)
+VUS=150 DURATION=30s make loadtest
+make down
+```
+
+Scaling the worker replicas takes on more load: 1 to 4 replicas is a 6x throughput
+gain and cuts p95 latency from 7.8s to 1.2s. Past that the single Postgres run
+store is the ceiling. The numbers and the honest bottleneck read are in
+[`loadtest/RESULTS.md`](loadtest/RESULTS.md).
+
+## More
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md): the pieces, the run lifecycle, how resume works.
+- [`DECISIONS.md`](DECISIONS.md): the real tradeoffs and why each call went the way it did.
 
 One honest limit today: the demo's tools keep their state in memory, so a run
 resumed in a different process starts that state fresh. The run, its steps, and
-the resume are durable; durable tools (a real repo on disk) come with the coding
-sandbox milestone.
+the resume are durable; durable tools (a real repo on disk) are the next step.
 
 ## Layout
 

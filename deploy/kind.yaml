@@ -1,0 +1,13 @@
+# A local three-node cluster: one control-plane and two workers, so runs land on
+# more than one node. The control-plane maps the Loupe NodePort to localhost:8899
+# so the load test and a browser can reach the service from the host.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30899
+        hostPort: 8899
+        protocol: TCP
+  - role: worker
+  - role: worker

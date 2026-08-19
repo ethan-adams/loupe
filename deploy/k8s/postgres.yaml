@@ -1,0 +1,43 @@
+# The run store. One Postgres pod with ephemeral storage: this is a load-test and
+# demo cluster, not production, so data does not need to outlive the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loupe-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: loupe-db }
+  template:
+    metadata:
+      labels: { app: loupe-db }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - { name: POSTGRES_USER, value: loupe }
+            - { name: POSTGRES_PASSWORD, value: loupe }
+            - { name: POSTGRES_DB, value: loupe }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "loupe"] }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loupe-db
+spec:
+  selector: { app: loupe-db }
+  ports:
+    - port: 5432
+      targetPort: 5432
