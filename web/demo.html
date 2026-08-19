@@ -30,12 +30,12 @@
   .brand { font-family: ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
   .brand b { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: .3rem 0 .2rem; letter-spacing: -.01em; }
-  .sub { color: var(--muted); margin: 0 0 1.4rem; max-width: 60ch; }
+  .sub { color: var(--muted); margin: 0 0 1.4rem; max-width: 62ch; }
 
   .q { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; }
   .q .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .q .text { margin-top: .4rem; white-space: pre-wrap; }
-  .q .cases { margin-top: .7rem; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .q .cases { margin-top: .7rem; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); line-height: 1.7; }
   .q .cases b { color: var(--text); font-weight: 600; }
 
   .controls { display: flex; align-items: center; gap: .9rem; margin: 1.2rem 0 .4rem; }
@@ -52,7 +52,7 @@
   .att.show { opacity: 1; transform: none; }
   .att .head { display: flex; align-items: center; justify-content: space-between; padding: .55rem .8rem; }
   .att .who { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
-  .att .who .ship { color: var(--ok); font-weight: 600; margin-left: .5rem; }
+  .att .who .ship { color: var(--accent); font-weight: 600; margin-left: .5rem; }
   .badge { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 600; padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--border); }
   .badge.ok { color: var(--ok); border-color: var(--ok); }
   .badge.part { color: var(--amber); border-color: var(--amber); }
@@ -63,10 +63,11 @@
   .att.part { border-left-color: var(--amber); }
   .att.bad { border-left-color: var(--err); }
   .att.none { border-left-color: var(--muted); }
+  .att.shipped { border-left-color: var(--accent); }
   pre.code {
     margin: 0; padding: .7rem .85rem; background: var(--code); border-top: 1px solid var(--border);
     font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.5; color: var(--text);
-    max-height: 190px; overflow: auto; white-space: pre;
+    max-height: 200px; overflow: auto; white-space: pre;
   }
   .spinner { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -75,8 +76,8 @@
   .gate.show { opacity: 1; }
   .gate .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .gate h2 { font-size: 1.1rem; margin: .3rem 0 .2rem; }
-  .verdict { margin-top: 1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .8rem .95rem; line-height: 1.45; }
-  .verdict .ok { color: var(--ok); }
+  .verdict { margin-top: 1rem; border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, var(--panel)); padding: .85rem .95rem; line-height: 1.5; }
+  .verdict code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
   .foot { margin-top: 2.2rem; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -85,12 +86,12 @@
 <main>
   <div class="brand">l<b>o</b>upe</div>
   <h1>Best of N</h1>
-  <p class="sub">Ask a local model to solve a real coding problem several times. The answers diverge and most have bugs. The gate is not a vote or an opinion: every solution is run against the tests, and you ship one that passes.</p>
+  <p class="sub">Ask a local model to solve a real coding problem several times. The solutions diverge, and the gate is not a vote or an opinion: every one is run against the tests. On a hard problem that is often the only thing that reveals which solutions actually work, and which just look right.</p>
 
   <div class="q">
     <div class="label">The problem</div>
     <div class="text" id="prompt"></div>
-    <div class="cases">Hidden tests cover: <b>"$180,000 - $220,000"</b>, <b>"180k-220k"</b>, <b>"150K to 200K"</b>, <b>"$95,000"</b>, <b>"$200,000 per year"</b>, <b>"Competitive"</b> &rarr; None, and more.</div>
+    <div class="cases">Hidden tests cover: <b>"a=1&amp;b=2"</b>, repeated keys <b>"a=1&amp;a=2"</b>, a key with no value <b>"flag"</b>, a leading <b>"?x=9"</b>, split-on-first <b>"a=b=c"</b>, and the empty string &rarr; <b>{}</b>.</div>
   </div>
 
   <div class="controls">
@@ -112,61 +113,75 @@
 
 <script>
 const DATA = {
-  "title": "Parse a salary string",
-  "prompt": "Write a Python function parse_comp(s) that extracts a salary range from a job posting string and returns [low, high] as integers in annual US dollars, or None if the string contains no number.\nRules:\n- A number may be plain (95000), use thousands commas (95,000), or use a 'k' or 'K' suffix meaning thousands (180k = 180000). A leading '$' is optional, and you should ignore any surrounding words or units such as 'per year' or 'USD'.\n- If the string gives a range (two numbers separated by '-', an en dash, or the word 'to'), return [low, high].\n- If it gives a single number, return [n, n].\n- If there is no number at all, return None.\nDefine only the function parse_comp.",
+  "title": "Parse a query string",
+  "prompt": "Write a Python function parse_query(s) that parses a URL query string like 'a=1\u0026b=2' into a dictionary.\nEach key maps to the list of its values, since the same key can appear more than once.\nDefine only the function parse_query.",
   "attempts": [
     {
       "index": 0,
-      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    num_pattern = r'(\\d+([,.]\\d*)*|\\d*k)'\n    matches = re.findall(num_pattern, s)\n    if not matches:\n        return None\n    nums = []\n    for m in matches:\n        m = m.replace(',', '')\n        if m.endswith('k'):\n            nums.append(int(m[:-1]) * 1000)\n        else:\n            nums.append(int(m))\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    elif len(nums) \u003e= 2:\n        # Check if the numbers are in a range\n        range_pattern = re.compile(r'\\d+\\D*\\d+')\n        if range_pattern.match(''.join(map(str, nums))):\n            return sorted(nums)\n        else:\n            return None\n    else:\n        return None\n\n# Test cases\n# print(parse_comp('salary is $95,000 per year'))  # [95000, 95000]\n# print(parse_comp('range is 180k to 220k'))  # [180000, 220000]\n# print(parse_comp('no numbers here'))  # None\n# print(parse_comp('12k - 15k'))  # [12000, 15000]",
-      "passed": 2,
-      "total": 8,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
       "ok": false
     },
     {
       "index": 1,
-      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().replace('per year', '').replace('usd', '').strip()\n    numbers = re.findall(r'\\$?\\d[\\d,.]*[kK]?', s)\n    nums = []\n    for num in numbers:\n        num = num.replace('$', '').replace(',', '').replace('k', '').replace('k', '')\n        if 'k' in num:\n            num = num.replace('k', '')\n            num = float(num) * 1000\n        else:\n            num = float(num)\n        nums.append(num)\n    if len(nums) == 0:\n        return None\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return [int(min(nums)), int(max(nums))]",
-      "passed": 5,
-      "total": 8,
+      "code": "def parse_query(s):\n    params = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in params:\n            params[key].append(value)\n        else:\n            params[key] = [value]\n    return params",
+      "passed": 6,
+      "total": 10,
       "ok": false
     },
     {
       "index": 2,
-      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'\\$?\\d[\\d,.]*[kK]?$'  # Matches numbers with optional $, commas, and k/K\n    nums = re.findall(num_pattern, s)\n    nums = [float(n.replace('$', '').replace(',', '').replace('k', '').replace('K', ''))\n            for n in nums]\n    \n    # Handle ranges\n    if len(nums) \u003e= 2:\n        # Check for range indicators\n        range_words = ['to', '-', '–']\n        for word in range_words:\n            if word in s:\n                try:\n                    low = min(nums)\n                    high = max(nums)\n                    return [int(low), int(high)]\n                except:\n                    return None\n        # If no range indicator, return the two numbers as [low, high]\n        return [int(min(nums)), int(max(nums))]\n    elif len(nums) == 1:\n        return [int(nums[0]), int(nums[0])]\n    else:\n        return None",
-      "passed": 3,
-      "total": 8,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in result:\n            result[key].append(value)\n        else:\n            result[key] = [value]\n    return result",
+      "passed": 6,
+      "total": 10,
       "ok": false
     },
     {
       "index": 3,
-      "code": "import re\n\ndef parse_comp(s):\n    num_pattern = r'(\\$?\\d[\\d,.]*[kK]?)' \n    matches = re.findall(num_pattern, s.lower())\n    numbers = []\n    for m in matches:\n        m = m.replace('$', '').replace(',', '')\n        if 'k' in m:\n            val = float(m.replace('k', '')) * 1000\n        else:\n            val = float(m)\n        numbers.append(int(val))\n    if len(numbers) == 0:\n        return None\n    elif len(numbers) == 1:\n        return [numbers[0], numbers[0]]\n    else:\n        return sorted(numbers)",
-      "passed": 8,
-      "total": 8,
-      "ok": true
+      "code": "def parse_query(s):\n    query_dict = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, val = pair.split('=', 1)\n        if key in query_dict:\n            query_dict[key].append(val)\n        else:\n            query_dict[key] = [val]\n    return query_dict",
+      "passed": 6,
+      "total": 10,
+      "ok": false
     },
     {
       "index": 4,
-      "code": "import re\n\ndef parse_comp(s):\n    s = s.lower().strip()\n    num_pattern = r'\\$?\\d+([,\\d]*)([kK])?|\\$?\\d+([,\\d]*)' \n    nums = re.findall(num_pattern, s)\n    nums = [n.replace('$', '').replace(',', '') for n in nums]\n    nums = [int(n) for n in nums if n.replace('k', '').isdigit()]\n    if not nums:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    # Handle ranges with 'to' or '-'\n    range_pattern = r'(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))\\s*(to|\\-|and)\\s*(\\d+([,\\d]*)([kK])?|\\d+([,\\d]*))'\n    range_match = re.search(range_pattern, s)\n    if range_match:\n        parts = range_match.groups()\n        low = parse_number(parts[0])\n        high = parse_number(parts[5])\n        return [low, high]\n    return [nums[0], nums[0]]\n\ndef parse_number(s):\n    s = s.replace('$', '').replace(',', '')\n    if 'k' in s:\n        val = int(s.replace('k', '')) * 1000\n    else:\n        val = int(s)\n    return val",
-      "passed": 2,
-      "total": 8,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
       "ok": false
     },
     {
       "index": 5,
-      "code": "import re\n\ndef parse_comp(s):\n    s = s.replace('$', '').lower()\n    nums = re.findall(r'\\d+\\.?\\d*|\\d+|\\d+k', s)\n    nums = [int(n.replace('k', '').replace(',', '')) * 1000 if n.endswith('k') else int(n.replace(',', '')) for n in nums]\n    nums = [x for x in nums if x \u003e 0]\n    if len(nums) \u003c 1:\n        return None\n    if len(nums) == 1:\n        return [nums[0], nums[0]]\n    nums.sort()\n    for i in range(len(nums)-1, 0, -1):\n        if nums[i] \u003c nums[i-1]:\n            nums.pop(i)\n    if len(nums) \u003e= 2:\n        return [nums[0], nums[-1]]\n    return None",
-      "passed": 2,
-      "total": 8,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, val = pair.split('=', 1)\n            if key in params:\n                params[key].append(val)\n            else:\n                params[key] = [val]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 6,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 7,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
       "ok": false
     }
   ],
-  "bestIndex": 3,
-  "total": 8,
-  "passing": 1
+  "bestIndex": 0,
+  "total": 10,
+  "passing": 0
 };
 const el = (id) => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 el('prompt').textContent = DATA.prompt;
-el('foot').textContent = 'A real recorded run: ' + DATA.attempts.length + ' independent solutions from one local model at temperature 0.8, each executed against ' + DATA.total + ' hidden test cases. A single call would have shipped one of the buggy ones silently.';
+el('foot').textContent = 'A real recorded run: ' + DATA.attempts.length + ' independent solutions from one local model at temperature 0.8, each executed against ' + DATA.total + ' hidden test cases.';
 
 function grade(a) {
   if (!a.code) return { cls: 'none', text: 'no code' };
@@ -192,26 +207,21 @@ function makeCard(a) {
   return { card, who, badge };
 }
 
-function reveal(parts, a, isBest) {
+function revealCard(parts, a, isBest) {
   const g = grade(a);
   parts.badge.className = 'badge ' + g.cls;
   parts.badge.textContent = g.text;
-  parts.card.classList.add(g.cls === 'ok' ? 'win' : g.cls);
+  parts.card.classList.add(isBest ? 'shipped' : (g.cls === 'ok' ? 'win' : g.cls));
   if (isBest) {
     const ship = document.createElement('span');
     ship.className = 'ship';
     ship.textContent = '✓ shipped';
     parts.who.appendChild(ship);
   }
-  if (a.code) {
+  if (a.code || a.note) {
     const pre = document.createElement('pre');
     pre.className = 'code';
-    pre.textContent = a.code;
-    parts.card.appendChild(pre);
-  } else if (a.note) {
-    const pre = document.createElement('pre');
-    pre.className = 'code';
-    pre.textContent = '// ' + a.note;
+    pre.textContent = a.code || ('// ' + a.note);
     parts.card.appendChild(pre);
   }
 }
@@ -236,10 +246,10 @@ async function run() {
     return p;
   });
 
-  const step = reduce ? 0 : 760;
+  const step = reduce ? 0 : 720;
   for (let i = 0; i < DATA.attempts.length; i++) {
     await wait(step);
-    reveal(parts[i], DATA.attempts[i], i === DATA.bestIndex);
+    revealCard(parts[i], DATA.attempts[i], i === DATA.bestIndex);
   }
 
   await wait(reduce ? 0 : 500);
@@ -252,9 +262,16 @@ function renderGate() {
   const gate = el('gate');
   gate.hidden = false;
   requestAnimationFrame(() => gate.classList.add('show'));
-  el('gateLine').textContent = DATA.passing + ' of ' + DATA.attempts.length + ' solutions pass all ' + DATA.total + ' tests. Ship attempt #' + (DATA.bestIndex + 1) + '.';
-  const buggy = DATA.attempts.length - DATA.passing;
-  el('verdict').innerHTML = buggy + ' of ' + DATA.attempts.length + ' solutions had real bugs &mdash; the kind a single call would ship silently. Running every candidate against the tests is what separates the one that works <span class="ok">&#10003;</span> from the ones that look right but are not.';
+
+  const best = DATA.attempts[DATA.bestIndex];
+  const n = DATA.attempts.length;
+  if (DATA.passing > 0) {
+    el('gateLine').textContent = DATA.passing + ' of ' + n + ' solutions pass all ' + DATA.total + ' tests. Ship attempt #' + (DATA.bestIndex + 1) + '.';
+    el('verdict').innerHTML = (n - DATA.passing) + ' of ' + n + ' solutions had real bugs, the kind a single call would ship silently. Running every candidate against the tests is what separates the one that works <span style="color:var(--ok)">&#10003;</span> from the ones that look right but are not.';
+  } else {
+    el('gateLine').textContent = 'None of the ' + n + ' solutions passes all ' + DATA.total + ' tests. Ship the best: attempt #' + (DATA.bestIndex + 1) + ' at ' + best.passed + '/' + DATA.total + '.';
+    el('verdict').innerHTML = 'Every solution has bugs, and they share the same blind spots: they drop keys with no value (<code>flag</code>) and do not strip a leading <code>?</code>. Sampling or a majority vote would have agreed on the same wrong output. Only running each candidate against the tests surfaces the gap, so you ship the best (' + best.passed + '/' + DATA.total + ') knowing exactly what it still misses.';
+  }
 }
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }

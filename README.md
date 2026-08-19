@@ -66,22 +66,24 @@ another reclaims its run once the lease expires.
 
 A single model call is often wrong or shallow. Ask it to solve a real coding
 problem several times and the solutions diverge, most with bugs. The gate here is
-not a vote or an opinion: every candidate is executed against a hidden test suite,
-and you ship one that passes. Needs Ollama:
+not a vote or an opinion: every candidate is executed against a hidden test suite.
+Needs Ollama:
 
 ```
 make code-consensus
 ```
 
-On the built-in problem, parsing a messy salary string into `[low, high]`, six
-solutions come back and only one passes all eight tests. The other five have real
-bugs a single call would have shipped silently; running the tests is what tells
-them apart. This is the front door to evaluating agents.
+The built-in problem parses a URL query string. Eight solutions come back and, on
+the recorded run, none passes every test: they all share the same blind spots
+(dropping keys with no value, not stripping a leading `?`). Sampling or a majority
+vote would agree on the same wrong output; only running the tests surfaces the gap,
+so you ship the best and know exactly what it misses. This is the front door to
+evaluating agents.
 
 A self-contained visual replay of a real recorded run is at
 [`web/demo.html`](web/demo.html) (open it in a browser).
 
-![Best of N: six code solutions run against the tests, one passes and ships](docs/consensus-demo.png)
+![Best of N: eight code solutions run against a hidden test suite, ranked by tests passed](docs/consensus-demo.png)
 
 A lighter variant for short-answer questions, where the gate is a majority vote
 plus an independent judge instead of tests, is `make consensus`.

@@ -79,7 +79,7 @@ func RunCode(ctx context.Context, p CodeProblem, n int) (*CodeResult, error) {
 					Code string `json:"code"`
 				}
 				_ = json.Unmarshal([]byte(raw), &parsed)
-				if c := stripFences(strings.TrimSpace(parsed.Code)); c != "" {
+				if c := normalizeCode(stripFences(strings.TrimSpace(parsed.Code))); c != "" {
 					a.Code = c
 					a.Note = ""
 					break
@@ -148,6 +148,17 @@ func summarize(attempts []CodeAttempt) (best, total, passing int) {
 		best = 0
 	}
 	return best, total, passing
+}
+
+// normalizeCode fixes the occasional model output that escapes newlines as the
+// two literal characters backslash-n instead of real newlines, which would never
+// run. Only touches code that is a single line yet contains those sequences, so
+// real multi-line code (and genuine \n inside string literals) is left alone.
+func normalizeCode(s string) string {
+	if !strings.Contains(s, "\n") && strings.Contains(s, `\n`) {
+		s = strings.NewReplacer(`\n`, "\n", `\t`, "\t").Replace(s)
+	}
+	return s
 }
 
 // stripFences removes a leading ```lang / trailing ``` if the model wrapped its

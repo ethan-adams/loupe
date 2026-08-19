@@ -1,0 +1,65 @@
+{
+  "title": "Parse a query string",
+  "prompt": "Write a Python function parse_query(s) that parses a URL query string like 'a=1\u0026b=2' into a dictionary.\nEach key maps to the list of its values, since the same key can appear more than once.\nDefine only the function parse_query.",
+  "attempts": [
+    {
+      "index": 0,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 1,
+      "code": "def parse_query(s):\n    params = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in params:\n            params[key].append(value)\n        else:\n            params[key] = [value]\n    return params",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 2,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in result:\n            result[key].append(value)\n        else:\n            result[key] = [value]\n    return result",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 3,
+      "code": "def parse_query(s):\n    query_dict = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, val = pair.split('=', 1)\n        if key in query_dict:\n            query_dict[key].append(val)\n        else:\n            query_dict[key] = [val]\n    return query_dict",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 4,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 5,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, val = pair.split('=', 1)\n            if key in params:\n                params[key].append(val)\n            else:\n                params[key] = [val]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 6,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 7,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    }
+  ],
+  "bestIndex": 0,
+  "total": 10,
+  "passing": 0
+}

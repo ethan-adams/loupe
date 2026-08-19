@@ -278,34 +278,27 @@ func normalizeForMark(s string) string {
 
 func sameAnswer(a, b string) bool { return normalizeForMark(a) == normalizeForMark(b) }
 
-const codeProblemPrompt = `Write a Python function parse_comp(s) that extracts a salary range from a job posting string and returns [low, high] as integers in annual US dollars, or None if the string contains no number.
-Rules:
-- A number may be plain (95000), use thousands commas (95,000), or use a 'k' or 'K' suffix meaning thousands (180k = 180000). A leading '$' is optional, and you should ignore any surrounding words or units such as 'per year' or 'USD'.
-- If the string gives a range (two numbers separated by '-', an en dash, or the word 'to'), return [low, high].
-- If it gives a single number, return [n, n].
-- If there is no number at all, return None.
-Define only the function parse_comp.`
+const codeProblemPrompt = `Write a Python function parse_query(s) that parses a URL query string like 'a=1&b=2' into a dictionary.
+Each key maps to the list of its values, since the same key can appear more than once.
+Define only the function parse_query.`
 
 const codeProblemHarness = `def _check():
     cases = [
-        ("$180,000 - $220,000", [180000, 220000]),
-        ("180k-220k", [180000, 220000]),
-        ("$180k", [180000, 180000]),
-        ("150K to 200K", [150000, 200000]),
-        ("Competitive", None),
-        ("", None),
-        ("$95,000", [95000, 95000]),
-        ("$200,000 per year", [200000, 200000]),
+        ("a=1&b=2", {"a": ["1"], "b": ["2"]}),
+        ("a=1&a=2", {"a": ["1", "2"]}),
+        ("", {}),
+        ("flag", {"flag": [""]}),
+        ("a=1&b=", {"a": ["1"], "b": [""]}),
+        ("?x=9", {"x": ["9"]}),
+        ("a=b=c", {"a": ["b=c"]}),
+        ("a=1&a=2&a=3", {"a": ["1", "2", "3"]}),
+        ("k", {"k": [""]}),
+        ("p=1&q=2&p=3", {"p": ["1", "3"], "q": ["2"]}),
     ]
     p = 0
     for s, exp in cases:
         try:
-            got = parse_comp(s)
-            if exp is None:
-                ok = got is None
-            else:
-                ok = got is not None and [int(got[0]), int(got[1])] == exp
-            if ok:
+            if parse_query(s) == exp:
                 p += 1
         except Exception:
             pass
@@ -322,7 +315,7 @@ func runCodeConsensus(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	problem := consensus.CodeProblem{Title: "Parse a salary string", Prompt: codeProblemPrompt, Harness: codeProblemHarness}
+	problem := consensus.CodeProblem{Title: "Parse a query string", Prompt: codeProblemPrompt, Harness: codeProblemHarness}
 	fmt.Fprintf(os.Stderr, "Problem: %s\nGenerating %d solutions, then running each against the tests...\n\n", problem.Title, *n)
 
 	res, err := consensus.RunCode(ctx, problem, *n)
