@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loupe · Best of N</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2a313c;
+    --text: #e6edf3; --muted: #8b98a9; --accent: #d9b45a;
+    --ok: #4bb37a; --err: #e5646e; --amber: #d9b45a;
+    --code: #0b0e13;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef1f5; --border: #e2e6ec;
+      --text: #16202b; --muted: #5b6675; --accent: #9a7a1f;
+      --ok: #1f8a54; --err: #c23a44; --amber: #9a7a1f; --code: #f2f4f7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  main { max-width: 720px; margin: 0 auto; padding: 2.4rem 1.2rem 4rem; }
+  .brand { font-family: ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
+  .brand b { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: .3rem 0 .2rem; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 1.4rem; max-width: 62ch; }
+
+  .q { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; }
+  .q .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .q .text { margin-top: .4rem; white-space: pre-wrap; }
+  .q .cases { margin-top: .7rem; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .q .cases b { color: var(--text); font-weight: 600; }
+
+  .controls { display: flex; align-items: center; gap: .9rem; margin: 1.2rem 0 .4rem; }
+  button.act { font: inherit; font-weight: 600; cursor: pointer; color: var(--bg); background: var(--accent); border: none; border-radius: 9px; padding: .55rem 1.1rem; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: .55rem 1.1rem; cursor: pointer; font: inherit; }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { color: var(--muted); font-size: 13px; }
+
+  .list { display: flex; flex-direction: column; gap: .7rem; margin-top: 1.2rem; }
+  .att {
+    border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px; background: var(--panel);
+    overflow: hidden; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s, border-color .3s;
+  }
+  .att.show { opacity: 1; transform: none; }
+  .att .head { display: flex; align-items: center; justify-content: space-between; padding: .55rem .8rem; }
+  .att .who { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .att .who .ship { color: var(--accent); font-weight: 600; margin-left: .5rem; }
+  .badge { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 600; padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--border); }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  .badge.part { color: var(--amber); border-color: var(--amber); }
+  .badge.bad { color: var(--err); border-color: var(--err); }
+  .badge.none { color: var(--muted); }
+  .badge.run { color: var(--muted); }
+  .att.win { border-left-color: var(--ok); }
+  .att.part { border-left-color: var(--amber); }
+  .att.bad { border-left-color: var(--err); }
+  .att.none { border-left-color: var(--muted); }
+  .att.shipped { border-left-color: var(--accent); }
+  pre.code {
+    margin: 0; padding: .7rem .85rem; background: var(--code); border-top: 1px solid var(--border);
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.5; color: var(--text);
+    max-height: 200px; overflow: auto; white-space: pre;
+  }
+  .spinner { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .gate { margin-top: 1.7rem; border-top: 1px solid var(--border); padding-top: 1.4rem; opacity: 0; transition: opacity .4s; }
+  .gate.show { opacity: 1; }
+  .gate .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .gate h2 { font-size: 1.1rem; margin: .3rem 0 .2rem; }
+  .verdict { margin-top: 1rem; border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, var(--panel)); padding: .85rem .95rem; line-height: 1.5; }
+  .verdict code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
+  .foot { margin-top: 2.2rem; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">l<b>o</b>upe</div>
+  <h1>Best of N</h1>
+  <p class="sub">Ask a local model to solve a real coding problem several times. The solutions diverge, and the gate is not a vote or an opinion: every one is run against the tests. On a hard problem that is often the only thing that reveals which solutions actually work, and which just look right.</p>
+
+  <div class="q">
+    <div class="label">The problem</div>
+    <div class="text" id="prompt"></div>
+    <div class="cases">Hidden tests cover: <b>"a=1&amp;b=2"</b>, repeated keys <b>"a=1&amp;a=2"</b>, a key with no value <b>"flag"</b>, a leading <b>"?x=9"</b>, split-on-first <b>"a=b=c"</b>, and the empty string &rarr; <b>{}</b>.</div>
+  </div>
+
+  <div class="controls">
+    <button class="act" id="run">Run best of N</button>
+    <button class="ghost" id="reset" hidden>Replay</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="gate" id="gate" hidden>
+    <div class="label">The gate · run the tests</div>
+    <h2 id="gateLine"></h2>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</main>
+
+<script>
+const DATA = {
+  "title": "Parse a query string",
+  "prompt": "Write a Python function parse_query(s) that parses a URL query string like 'a=1\u0026b=2' into a dictionary.\nEach key maps to the list of its values, since the same key can appear more than once.\nDefine only the function parse_query.",
+  "attempts": [
+    {
+      "index": 0,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 1,
+      "code": "def parse_query(s):\n    params = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in params:\n            params[key].append(value)\n        else:\n            params[key] = [value]\n    return params",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 2,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, value = pair.split('=', 1)\n        if key in result:\n            result[key].append(value)\n        else:\n            result[key] = [value]\n    return result",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 3,
+      "code": "def parse_query(s):\n    query_dict = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        key, val = pair.split('=', 1)\n        if key in query_dict:\n            query_dict[key].append(val)\n        else:\n            query_dict[key] = [val]\n    return query_dict",
+      "passed": 6,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 4,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 5,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, val = pair.split('=', 1)\n            if key in params:\n                params[key].append(val)\n            else:\n                params[key] = [val]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 6,
+      "code": "def parse_query(s):\n    result = {}\n    pairs = s.split('\u0026')\n    for pair in pairs:\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in result:\n                result[key].append(value)\n            else:\n                result[key] = [value]\n    return result",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    },
+    {
+      "index": 7,
+      "code": "def parse_query(s):\n    params = {}\n    for pair in s.split('\u0026'):\n        if '=' in pair:\n            key, value = pair.split('=', 1)\n            if key in params:\n                params[key].append(value)\n            else:\n                params[key] = [value]\n    return params",
+      "passed": 7,
+      "total": 10,
+      "ok": false
+    }
+  ],
+  "bestIndex": 0,
+  "total": 10,
+  "passing": 0
+};
+const el = (id) => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+el('prompt').textContent = DATA.prompt;
+el('foot').textContent = 'A real recorded run: ' + DATA.attempts.length + ' independent solutions from one local model at temperature 0.8, each executed against ' + DATA.total + ' hidden test cases.';
+
+function grade(a) {
+  if (!a.code) return { cls: 'none', text: 'no code' };
+  if (a.ok) return { cls: 'ok', text: 'PASS ' + a.passed + '/' + a.total };
+  if (a.passed > 0) return { cls: 'part', text: a.passed + '/' + a.total };
+  return { cls: 'bad', text: a.passed + '/' + a.total };
+}
+
+function makeCard(a) {
+  const card = document.createElement('div');
+  card.className = 'att';
+  const head = document.createElement('div');
+  head.className = 'head';
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = 'attempt #' + (a.index + 1);
+  const badge = document.createElement('span');
+  badge.className = 'badge run';
+  badge.innerHTML = '<span class="spinner"></span>';
+  head.appendChild(who);
+  head.appendChild(badge);
+  card.appendChild(head);
+  return { card, who, badge };
+}
+
+function revealCard(parts, a, isBest) {
+  const g = grade(a);
+  parts.badge.className = 'badge ' + g.cls;
+  parts.badge.textContent = g.text;
+  parts.card.classList.add(isBest ? 'shipped' : (g.cls === 'ok' ? 'win' : g.cls));
+  if (isBest) {
+    const ship = document.createElement('span');
+    ship.className = 'ship';
+    ship.textContent = '✓ shipped';
+    parts.who.appendChild(ship);
+  }
+  if (a.code || a.note) {
+    const pre = document.createElement('pre');
+    pre.className = 'code';
+    pre.textContent = a.code || ('// ' + a.note);
+    parts.card.appendChild(pre);
+  }
+}
+
+function reset() {
+  el('list').innerHTML = '';
+  el('gate').hidden = true; el('gate').classList.remove('show');
+  el('reset').hidden = true;
+  el('status').textContent = '';
+  el('run').disabled = false;
+}
+
+async function run() {
+  reset();
+  el('run').disabled = true;
+  el('status').textContent = 'generating ' + DATA.attempts.length + ' solutions, then running the tests...';
+
+  const parts = DATA.attempts.map(a => {
+    const p = makeCard(a);
+    el('list').appendChild(p.card);
+    requestAnimationFrame(() => p.card.classList.add('show'));
+    return p;
+  });
+
+  const step = reduce ? 0 : 720;
+  for (let i = 0; i < DATA.attempts.length; i++) {
+    await wait(step);
+    revealCard(parts[i], DATA.attempts[i], i === DATA.bestIndex);
+  }
+
+  await wait(reduce ? 0 : 500);
+  renderGate();
+  el('reset').hidden = false;
+  el('status').textContent = '';
+}
+
+function renderGate() {
+  const gate = el('gate');
+  gate.hidden = false;
+  requestAnimationFrame(() => gate.classList.add('show'));
+
+  const best = DATA.attempts[DATA.bestIndex];
+  const n = DATA.attempts.length;
+  if (DATA.passing > 0) {
+    el('gateLine').textContent = DATA.passing + ' of ' + n + ' solutions pass all ' + DATA.total + ' tests. Ship attempt #' + (DATA.bestIndex + 1) + '.';
+    el('verdict').innerHTML = (n - DATA.passing) + ' of ' + n + ' solutions had real bugs, the kind a single call would ship silently. Running every candidate against the tests is what separates the one that works <span style="color:var(--ok)">&#10003;</span> from the ones that look right but are not.';
+  } else {
+    el('gateLine').textContent = 'None of the ' + n + ' solutions passes all ' + DATA.total + ' tests. Ship the best: attempt #' + (DATA.bestIndex + 1) + ' at ' + best.passed + '/' + DATA.total + '.';
+    el('verdict').innerHTML = 'Every solution has bugs, and they share the same blind spots: they drop keys with no value (<code>flag</code>) and do not strip a leading <code>?</code>. Sampling or a majority vote would have agreed on the same wrong output. Only running each candidate against the tests surfaces the gap, so you ship the best (' + best.passed + '/' + DATA.total + ') knowing exactly what it still misses.';
+  }
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+el('run').onclick = run;
+el('reset').onclick = run;
+if (location.search.includes('autoplay')) run();
+</script>
+</body>
+</html>
