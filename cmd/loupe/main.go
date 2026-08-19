@@ -22,6 +22,7 @@ import (
 	"github.com/ethan-adams/loupe/internal/agent"
 	"github.com/ethan-adams/loupe/internal/consensus"
 	"github.com/ethan-adams/loupe/internal/demo"
+	"github.com/ethan-adams/loupe/internal/evals"
 	"github.com/ethan-adams/loupe/internal/render"
 	"github.com/ethan-adams/loupe/internal/run"
 	"github.com/ethan-adams/loupe/internal/server"
@@ -53,6 +54,8 @@ func main() {
 		os.Exit(runConsensus(os.Args[2:]))
 	case "code-consensus":
 		os.Exit(runCodeConsensus(os.Args[2:]))
+	case "eval":
+		os.Exit(runEval(os.Args[2:]))
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -278,34 +281,6 @@ func normalizeForMark(s string) string {
 
 func sameAnswer(a, b string) bool { return normalizeForMark(a) == normalizeForMark(b) }
 
-const codeProblemPrompt = `Write a Python function parse_query(s) that parses a URL query string like 'a=1&b=2' into a dictionary.
-Each key maps to the list of its values, since the same key can appear more than once.
-Define only the function parse_query.`
-
-const codeProblemHarness = `def _check():
-    cases = [
-        ("a=1&b=2", {"a": ["1"], "b": ["2"]}),
-        ("a=1&a=2", {"a": ["1", "2"]}),
-        ("", {}),
-        ("flag", {"flag": [""]}),
-        ("a=1&b=", {"a": ["1"], "b": [""]}),
-        ("?x=9", {"x": ["9"]}),
-        ("a=b=c", {"a": ["b=c"]}),
-        ("a=1&a=2&a=3", {"a": ["1", "2", "3"]}),
-        ("k", {"k": [""]}),
-        ("p=1&q=2&p=3", {"p": ["1", "3"], "q": ["2"]}),
-    ]
-    p = 0
-    for s, exp in cases:
-        try:
-            if parse_query(s) == exp:
-                p += 1
-        except Exception:
-            pass
-    print("RESULT %d/%d" % (p, len(cases)))
-
-_check()`
-
 func runCodeConsensus(args []string) int {
 	fs := flag.NewFlagSet("code-consensus", flag.ExitOnError)
 	n := fs.Int("n", 5, "how many independent solutions to generate")
@@ -315,7 +290,7 @@ func runCodeConsensus(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	problem := consensus.CodeProblem{Title: "Parse a query string", Prompt: codeProblemPrompt, Harness: codeProblemHarness}
+	problem := evals.QueryProblem
 	fmt.Fprintf(os.Stderr, "Problem: %s\nGenerating %d solutions, then running each against the tests...\n\n", problem.Title, *n)
 
 	res, err := consensus.RunCode(ctx, problem, *n)
@@ -340,6 +315,60 @@ func runCodeConsensus(args []string) int {
 	}
 	fmt.Printf("\n  gate = run the tests: %d of %d solutions pass all %d cases.\n", res.Passing, len(res.Attempts), res.Total)
 	fmt.Printf("  ship attempt #%d (passed %d/%d).\n", res.BestIndex+1, res.Attempts[res.BestIndex].Passed, res.Total)
+	return 0
+}
+
+func runEval(args []string) int {
+	fs := flag.NewFlagSet("eval", flag.ExitOnError)
+	n := fs.Int("n", 5, "solutions to generate per problem")
+	histPath := fs.String("history", ".loupe-evals.json", "scorecard history file")
+	_ = fs.Parse(args)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	suite := evals.DefaultSuite()
+	model := os.Getenv("LOUPE_OLLAMA_MODEL")
+	if model == "" {
+		model = "qwen3:8b"
+	}
+	fmt.Fprintf(os.Stderr, "Eval suite: %d problems x %d solutions each, model %s.\nRunning (this executes generated code against tests)...\n\n", len(suite), *n, model)
+
+	card, err := evals.Run(ctx, suite, *n, model)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "eval: %v\n", err)
+		return 1
+	}
+	card.RanAt = time.Now().UTC().Format(time.RFC3339)
+
+	hist, _ := evals.LoadHistory(*histPath)
+	var prev *evals.Scorecard
+	if len(hist) > 0 {
+		prev = hist[len(hist)-1]
+	}
+	regs := evals.Regressions(prev, card)
+
+	fmt.Printf("  %-26s %-8s %-9s %s\n", "TASK", "BEST", "PASS-RATE", "PASSED-ALL")
+	for _, t := range card.Tasks {
+		fmt.Printf("  %-26s %-8s %-9s %d/%d\n", t.Title,
+			fmt.Sprintf("%d/%d", t.BestPassed, t.Total), fmt.Sprintf("%.0f%%", t.BestRate*100), t.PassedAll, t.N)
+	}
+	fmt.Printf("\n  overall pass-rate: %.0f%%   model: %s\n", card.Overall*100, card.Model)
+
+	switch {
+	case prev == nil:
+		fmt.Println("  (first run; no previous scorecard to compare against)")
+	case len(regs) == 0:
+		fmt.Println("  regressions vs last run: none")
+	default:
+		for _, r := range regs {
+			fmt.Printf("  REGRESSION: %s  %.0f%% -> %.0f%%\n", r.Title, r.Was*100, r.Now*100)
+		}
+	}
+
+	if err := evals.SaveHistory(*histPath, hist, card); err != nil {
+		fmt.Fprintf(os.Stderr, "eval: could not save history: %v\n", err)
+	}
 	return 0
 }
 
@@ -397,5 +426,13 @@ usage:
   loupe serve [--addr :8080] [--workers 2] [--model scripted|ollama]
        Serve the GraphQL subgraph + playground and a live SSE trace stream,
        with embedded workers draining the queue. Needs `+"`make db-up`"+`.
+
+  loupe code-consensus [--n 6]
+       Solve one coding problem N ways, run every solution against tests,
+       and ship the best. Needs Ollama.
+
+  loupe eval [--n 5]
+       Score a model across a suite of coding problems and flag regressions
+       versus the last run. Needs Ollama.
 `)
 }

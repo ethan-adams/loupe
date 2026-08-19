@@ -15,6 +15,9 @@ demo-resume: ## Watch a run survive a worker crash: A commits the fix, dies, B r
 code-consensus: ## Solve a real coding problem N ways, run each against tests, ship one that passes (needs Ollama)
 	go run ./cmd/loupe code-consensus $(if $(N),--n $(N),)
 
+eval: ## Score a model across a suite of coding problems and flag regressions vs the last run (needs Ollama)
+	go run ./cmd/loupe eval $(if $(N),--n $(N),)
+
 consensus: ## Answer one short question N ways, gate by majority vote + a judge (needs Ollama)
 	go run ./cmd/loupe consensus $(if $(N),--n $(N),) $(if $(Q),--question "$(Q)",)
 

@@ -2,3 +2,6 @@
 *.out
 *.test
 .DS_Store
+
+# local eval scorecards
+.loupe-evals.json

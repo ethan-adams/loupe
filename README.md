@@ -88,6 +88,27 @@ A self-contained visual replay of a real recorded run is at
 A lighter variant for short-answer questions, where the gate is a majority vote
 plus an independent judge instead of tests, is `make consensus`.
 
+## Evals: score a model across a suite, catch regressions
+
+The same test gate, run as measurement. `make eval` runs a suite of coding
+problems against the model, several solutions each, and prints a scorecard of how
+well the best solution does on each problem's hidden tests. It stores every run,
+so the next run flags any task whose score dropped.
+
+```
+  TASK                       BEST     PASS-RATE PASSED-ALL
+  Compare version strings    9/10     90%       0/5
+  Parse a query string       7/10     70%       0/5
+  Parse a duration string    8/10     80%       0/5
+
+  overall pass-rate: 80%   model: qwen3:8b
+  regressions vs last run: none
+```
+
+This is the honest core of evals: real scores from real execution, tracked over
+time, so a prompt or model change that quietly makes things worse shows up as a
+number going down.
+
 ## Query it, stream it
 
 `make serve` runs an HTTP server with embedded workers, then open
