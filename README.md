@@ -83,7 +83,7 @@ evaluating agents.
 A self-contained visual replay of a real recorded run is at
 [`web/demo.html`](web/demo.html) (open it in a browser).
 
-![Best of N: eight code solutions run against a hidden test suite, ranked by tests passed](docs/consensus-demo.png)
+![Best of N: eight code solutions stream in and are graded against a hidden test suite](docs/bestofn.gif)
 
 A lighter variant for short-answer questions, where the gate is a majority vote
 plus an independent judge instead of tests, is `make consensus`.
