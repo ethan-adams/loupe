@@ -1,0 +1,56 @@
+{
+  "question": "An AI agent keeps getting stuck in a loop: it calls the same tool over and over without making progress toward the goal. In one short sentence, name the single best way to detect and stop this. Answer with just the approach itself, concisely.",
+  "attempts": [
+    {
+      "index": 0,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool usage frequency can detect this behavior. Limiting the number of consecutive tool calls prevents infinite loops and ensures progress toward the goal.",
+      "answer": "Limit consecutive tool calls.",
+      "norm": "limitconsecutivetoolcalls"
+    },
+    {
+      "index": 1,
+      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency can detect this pattern. Limiting the number of consecutive identical tool calls would prevent infinite loops.",
+      "answer": "Limit consecutive identical tool calls.",
+      "norm": "limitconsecutiveidenticaltoolcalls"
+    },
+    {
+      "index": 2,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool invocation frequency can detect this behavior. Limiting the number of consecutive identical tool calls would prevent the loop and allow the agent to explore alternative actions.",
+      "answer": "Limit consecutive identical tool calls.",
+      "norm": "limitconsecutiveidenticaltoolcalls"
+    },
+    {
+      "index": 3,
+      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency and detecting redundant calls can identify this pattern. Implementing a check for repeated tool calls within a defined timeframe would allow intervention.",
+      "answer": "Detect repeated tool calls within a timeframe.",
+      "norm": "detectrepeatedtoolcallswithinatimeframe"
+    },
+    {
+      "index": 4,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking the number of unique tool calls can detect this behavior. Once a tool is called multiple times without progress, the system can intervene to stop the loop.",
+      "answer": "Track and limit unique tool calls per iteration.",
+      "norm": "trackandlimituniquetoolcallsperiteration"
+    }
+  ],
+  "tally": [
+    {
+      "answer": "Limit consecutive identical tool calls.",
+      "count": 2
+    },
+    {
+      "answer": "Detect repeated tool calls within a timeframe.",
+      "count": 1
+    },
+    {
+      "answer": "Limit consecutive tool calls.",
+      "count": 1
+    },
+    {
+      "answer": "Track and limit unique tool calls per iteration.",
+      "count": 1
+    }
+  ],
+  "majority": "Limit consecutive identical tool calls.",
+  "judge": "Limit consecutive identical tool calls.",
+  "judgeWhy": "This directly addresses the loop by restricting repeated identical actions, preventing infinite cycles without progress."
+}

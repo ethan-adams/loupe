@@ -19,7 +19,8 @@ func TestNormalizeCollapsesCosmetics(t *testing.T) {
 
 func TestTallyPicksMajorityAndSortsByCount(t *testing.T) {
 	attempts := []Attempt{
-		{Norm: "0.30"}, {Norm: "0.30"}, {Norm: "0.80"}, {Norm: "0.30"}, {Norm: "0.80"}, {Norm: ""},
+		{Answer: "0.30", Norm: "0.30"}, {Answer: "0.30", Norm: "0.30"}, {Answer: "0.80", Norm: "0.80"},
+		{Answer: "0.30", Norm: "0.30"}, {Answer: "0.80", Norm: "0.80"}, {Answer: "", Norm: ""},
 	}
 	votes, majority := tally(attempts)
 	if majority != "0.30" {

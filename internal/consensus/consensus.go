@@ -120,14 +120,19 @@ func Run(ctx context.Context, question, expected string, n int) (*Result, error)
 
 func tally(attempts []Attempt) ([]Vote, string) {
 	counts := map[string]int{}
+	rep := map[string]string{} // normalized form -> a representative original answer
 	for _, a := range attempts {
-		if a.Norm != "" {
-			counts[a.Norm]++
+		if a.Norm == "" {
+			continue
+		}
+		counts[a.Norm]++
+		if _, ok := rep[a.Norm]; !ok {
+			rep[a.Norm] = a.Answer
 		}
 	}
 	votes := make([]Vote, 0, len(counts))
 	for k, v := range counts {
-		votes = append(votes, Vote{Answer: k, Count: v})
+		votes = append(votes, Vote{Answer: rep[k], Count: v})
 	}
 	// Most votes first; ties broken by answer text so the order is stable.
 	sort.Slice(votes, func(i, j int) bool {

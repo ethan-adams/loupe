@@ -9,13 +9,13 @@
     color-scheme: light dark;
     --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2a313c;
     --text: #e6edf3; --muted: #8b98a9; --accent: #d9b45a;
-    --ok: #4bb37a; --warn: #d9b45a; --err: #e5646e; --think: #6ea8fe;
+    --ok: #4bb37a; --err: #e5646e;
   }
   @media (prefers-color-scheme: light) {
     :root {
       --bg: #f6f7f9; --panel: #ffffff; --panel-2: #eef1f5; --border: #e2e6ec;
       --text: #16202b; --muted: #5b6675; --accent: #9a7a1f;
-      --ok: #1f8a54; --warn: #9a7a1f; --err: #c23a44; --think: #2f6bd6;
+      --ok: #1f8a54; --err: #c23a44;
     }
   }
   * { box-sizing: border-box; }
@@ -29,59 +29,71 @@
   .brand { font-family: ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
   .brand b { color: var(--accent); }
   h1 { font-size: 1.5rem; margin: .3rem 0 .2rem; letter-spacing: -.01em; }
-  .sub { color: var(--muted); margin: 0 0 1.6rem; }
+  .sub { color: var(--muted); margin: 0 0 1.4rem; }
+
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+  .tab {
+    font: inherit; cursor: pointer; background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 9px; padding: .45rem .85rem; text-align: left;
+  }
+  .tab.active { border-color: var(--accent); }
+  .tab .t { font-weight: 600; display: block; }
+  .tab .d { font-size: 11.5px; color: var(--muted); }
 
   .q { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 1rem 1.15rem; }
   .q .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .q .text { margin-top: .35rem; }
 
   .controls { display: flex; align-items: center; gap: .9rem; margin: 1.2rem 0 .4rem; }
-  button {
-    font: inherit; font-weight: 600; cursor: pointer; color: var(--bg); background: var(--accent);
-    border: none; border-radius: 9px; padding: .55rem 1.1rem;
-  }
-  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button.act { font: inherit; font-weight: 600; cursor: pointer; color: var(--bg); background: var(--accent); border: none; border-radius: 9px; padding: .55rem 1.1rem; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: .55rem 1.1rem; cursor: pointer; font: inherit; }
   button:disabled { opacity: .5; cursor: default; }
   .status { color: var(--muted); font-size: 13px; }
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: 1.1rem; }
-  @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
   .att {
     border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px; background: var(--panel);
-    padding: .6rem .7rem; min-height: 84px; opacity: 0; transform: translateY(6px);
+    padding: .6rem .7rem; min-height: 92px; opacity: 0; transform: translateY(6px);
     transition: opacity .3s, transform .3s, border-color .3s;
   }
   .att.show { opacity: 1; transform: none; }
   .att .n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
-  .att .ans { font-family: ui-monospace, Menlo, monospace; font-size: 1.5rem; font-weight: 600; margin: .2rem 0; }
-  .att .why { font-size: 11.5px; color: var(--muted); line-height: 1.35; max-height: 2.7em; overflow: hidden; }
+  .att .ans { font-family: ui-monospace, Menlo, monospace; font-weight: 600; margin: .25rem 0; line-height: 1.25; }
+  .att.num .ans { font-size: 1.5rem; }
+  .att.text .ans { font-size: .92rem; }
+  .att .why { font-size: 11.5px; color: var(--muted); line-height: 1.35; max-height: 3.9em; overflow: hidden; }
   .att.win { border-left-color: var(--ok); }
   .att.out { border-left-color: var(--err); }
   .att.out .ans { color: var(--err); }
-  .att .chip { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--err); }
-  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: .5rem auto; }
+  .att.neutral { border-left-color: var(--border); }
+  .att .chip { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+  .att .chip.bad { color: var(--err); }
+  .att .chip.good { color: var(--ok); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: .6rem auto; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .gate { margin-top: 1.6rem; border-top: 1px solid var(--border); padding-top: 1.4rem; opacity: 0; transition: opacity .4s; }
   .gate.show { opacity: 1; }
   .gate h2 { font-size: 1rem; margin: 0 0 .7rem; }
   .gate h2 .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
-  .vote { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: .7rem; margin-bottom: .5rem; }
-  .vote .val { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+  .vote { display: grid; grid-template-columns: minmax(64px,auto) 1fr auto; align-items: center; gap: .7rem; margin-bottom: .5rem; }
+  .vote .val { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 13px; }
   .vote .track { height: 12px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
-  .vote .fill { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--accent); transition: width .7s ease-out; }
+  .vote .fill { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
   .vote.win .fill { background: var(--ok); }
-  .vote.lose .fill { background: var(--err); }
   .vote .cnt { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: 1.1rem; }
-  @media (max-width: 520px) { .cards2 { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .cards2 { grid-template-columns: 1fr; } }
   .rescard { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: .8rem .9rem; }
   .rescard .label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
-  .rescard .big { font-family: ui-monospace, Menlo, monospace; font-size: 1.7rem; font-weight: 600; margin: .2rem 0; }
+  .rescard .big { font-family: ui-monospace, Menlo, monospace; font-weight: 600; margin: .25rem 0; }
+  .rescard.num .big { font-size: 1.7rem; }
+  .rescard.text .big { font-size: 1rem; line-height: 1.3; }
   .rescard .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
 
-  .verdict { margin-top: 1.1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .75rem .95rem; font-weight: 600; }
+  .verdict { margin-top: 1.1rem; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--panel)); padding: .8rem .95rem; line-height: 1.45; }
   .verdict .ok { color: var(--ok); }
   .foot { margin-top: 2.2rem; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -91,7 +103,9 @@
 <main>
   <div class="brand">l<b>o</b>upe</div>
   <h1>Best of N</h1>
-  <p class="sub">One hard question, answered many ways by a local model. Watch the answers diverge, then a gate picks the one to trust.</p>
+  <p class="sub">One question, answered many ways by a local model. Watch the answers diverge, then a gate picks the one to trust. Pick a question:</p>
+
+  <div class="tabs" id="tabs"></div>
 
   <div class="q">
     <div class="label">The question</div>
@@ -99,23 +113,23 @@
   </div>
 
   <div class="controls">
-    <button id="run">Run consensus</button>
-    <button id="reset" class="ghost" hidden>Replay</button>
+    <button class="act" id="run">Run consensus</button>
+    <button class="ghost" id="reset" hidden>Replay</button>
     <span class="status" id="status"></span>
   </div>
 
   <div class="grid" id="grid"></div>
 
   <div class="gate" id="gate" hidden>
-    <h2><span class="label">Gate 1 · </span> Majority vote</h2>
+    <h2 id="gateTitle"></h2>
     <div id="votes"></div>
     <div class="cards2">
-      <div class="rescard">
-        <div class="label">Majority</div>
+      <div class="rescard" id="majCard">
+        <div class="label" id="majLabel"></div>
         <div class="big" id="majority"></div>
-        <div class="note">The answer the most attempts agreed on.</div>
+        <div class="note" id="majNote"></div>
       </div>
-      <div class="rescard">
+      <div class="rescard" id="judgeCard">
         <div class="label">Gate 2 · Judge</div>
         <div class="big" id="judge"></div>
         <div class="note" id="judgeWhy"></div>
@@ -124,11 +138,12 @@
     <div class="verdict" id="verdict"></div>
   </div>
 
-  <p class="foot">This is a real recorded run: one model, one question, six independent tries at temperature 0.7. A single call is sometimes wrong; sampling and gating is how you get an answer you can trust. It is the front door to evaluating agents.</p>
+  <p class="foot">Real recorded runs: one local model, one question, several independent tries at temperature 0.7. A single call is sometimes wrong or shallow; sampling and gating is how you get an answer you can trust. It is the front door to evaluating agents.</p>
 </main>
 
 <script>
-const DATA = {
+const SCENARIOS = [
+  { title: "Word problem", desc: "one right answer", kind: "num", data: {
   "question": "A notebook and a pen cost $2.60 in total. The notebook costs $2.00 more than the pen. How much does the pen cost, in dollars? Answer with just the number.",
   "expected": "0.30",
   "attempts": [
@@ -182,37 +197,119 @@ const DATA = {
   "majority": "0.30",
   "judge": "0.30",
   "judgeWhy": "Let the pen cost x. Then the notebook costs x + 2.00. Total cost: x + (x + 2.00) = 2.60. Solving gives x = 0.30."
-};
+} },
+  { title: "Agent design", desc: "open-ended", kind: "text", data: {
+  "question": "An AI agent keeps getting stuck in a loop: it calls the same tool over and over without making progress toward the goal. In one short sentence, name the single best way to detect and stop this. Answer with just the approach itself, concisely.",
+  "attempts": [
+    {
+      "index": 0,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool usage frequency can detect this behavior. Limiting the number of consecutive tool calls prevents infinite loops and ensures progress toward the goal.",
+      "answer": "Limit consecutive tool calls.",
+      "norm": "limitconsecutivetoolcalls"
+    },
+    {
+      "index": 1,
+      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency can detect this pattern. Limiting the number of consecutive identical tool calls would prevent infinite loops.",
+      "answer": "Limit consecutive identical tool calls.",
+      "norm": "limitconsecutiveidenticaltoolcalls"
+    },
+    {
+      "index": 2,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking tool invocation frequency can detect this behavior. Limiting the number of consecutive identical tool calls would prevent the loop and allow the agent to explore alternative actions.",
+      "answer": "Limit consecutive identical tool calls.",
+      "norm": "limitconsecutiveidenticaltoolcalls"
+    },
+    {
+      "index": 3,
+      "reasoning": "The AI agent's repeated use of the same tool without progress indicates a loop. Monitoring tool invocation frequency and detecting redundant calls can identify this pattern. Implementing a check for repeated tool calls within a defined timeframe would allow intervention.",
+      "answer": "Detect repeated tool calls within a timeframe.",
+      "norm": "detectrepeatedtoolcallswithinatimeframe"
+    },
+    {
+      "index": 4,
+      "reasoning": "The AI agent's repeated calls to the same tool indicate a loop, so tracking the number of unique tool calls can detect this behavior. Once a tool is called multiple times without progress, the system can intervene to stop the loop.",
+      "answer": "Track and limit unique tool calls per iteration.",
+      "norm": "trackandlimituniquetoolcallsperiteration"
+    }
+  ],
+  "tally": [
+    {
+      "answer": "Limit consecutive identical tool calls.",
+      "count": 2
+    },
+    {
+      "answer": "Detect repeated tool calls within a timeframe.",
+      "count": 1
+    },
+    {
+      "answer": "Limit consecutive tool calls.",
+      "count": 1
+    },
+    {
+      "answer": "Track and limit unique tool calls per iteration.",
+      "count": 1
+    }
+  ],
+  "majority": "Limit consecutive identical tool calls.",
+  "judge": "Limit consecutive identical tool calls.",
+  "judgeWhy": "This directly addresses the loop by restricting repeated identical actions, preventing infinite cycles without progress."
+} },
+];
 const $ = (id) => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-$('q').textContent = DATA.question;
+let cur = SCENARIOS[0], es = null;
 
 function norm(s){ return String(s).toLowerCase().trim().replace(/\.$/,'').replace(/[$, ]/g,''); }
-const MAJ = norm(DATA.majority);
+function topNorm(){ return norm(cur.data.majority); }
+
+function renderTabs() {
+  const t = $('tabs'); t.innerHTML = '';
+  SCENARIOS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (s === cur ? ' active' : '');
+    b.innerHTML = '<span class="t">' + s.title + '</span><span class="d">' + s.desc + '</span>';
+    b.onclick = () => select(i);
+    t.appendChild(b);
+  });
+}
+
+function select(i) {
+  cur = SCENARIOS[i];
+  renderTabs();
+  $('q').textContent = cur.data.question;
+  reset();
+}
 
 function reset() {
   $('grid').innerHTML = '';
   $('gate').hidden = true; $('gate').classList.remove('show');
   $('votes').innerHTML = '';
-  $('verdict').textContent = '';
   $('reset').hidden = true;
   $('status').textContent = '';
   $('run').disabled = false;
 }
 
-function attemptCard(a, i) {
+function attemptCard(i) {
   const el = document.createElement('div');
-  el.className = 'att';
+  el.className = 'att ' + (cur.kind === 'num' ? 'num' : 'text');
   el.innerHTML = '<div class="n">attempt #' + (i+1) + '</div><div class="spinner"></div>';
   return el;
 }
 
 function fillCard(el, a) {
-  const outlier = norm(a.answer) !== MAJ;
-  el.classList.add('show', outlier ? 'out' : 'win');
+  const matchesTop = norm(a.answer) === topNorm();
+  el.className = 'att ' + (cur.kind === 'num' ? 'num ' : 'text ');
+  let chip = '';
+  if (cur.kind === 'num') {
+    el.className += matchesTop ? 'win' : 'out';
+    if (!matchesTop) chip = ' <span class="chip bad">outlier</span>';
+  } else {
+    el.className += matchesTop ? 'win' : 'neutral';
+    if (matchesTop) chip = ' <span class="chip good">plurality</span>';
+  }
+  el.classList.add('show');
   el.innerHTML =
-    '<div class="n">attempt #' + (a.index+1) + (outlier ? ' <span class="chip">outlier</span>' : '') + '</div>' +
+    '<div class="n">attempt #' + (a.index+1) + chip + '</div>' +
     '<div class="ans">' + a.answer + '</div>' +
     '<div class="why">' + a.reasoning + '</div>';
 }
@@ -220,41 +317,40 @@ function fillCard(el, a) {
 async function run() {
   reset();
   $('run').disabled = true;
-  $('status').textContent = 'running ' + DATA.attempts.length + ' attempts in parallel...';
+  const atts = cur.data.attempts;
+  $('status').textContent = 'running ' + atts.length + ' attempts in parallel...';
 
-  const cards = DATA.attempts.map((a, i) => {
-    const el = attemptCard(a, i);
+  const cards = atts.map((a, i) => {
+    const el = attemptCard(i);
     $('grid').appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));
     return el;
   });
 
-  const step = reduce ? 0 : 620;
-  for (let i = 0; i < DATA.attempts.length; i++) {
-    await wait(step);
-    fillCard(cards[i], DATA.attempts[i]);
-  }
+  const step = reduce ? 0 : 640;
+  for (let i = 0; i < atts.length; i++) { await wait(step); fillCard(cards[i], atts[i]); }
 
   await wait(reduce ? 0 : 500);
-  $('status').textContent = 'answers disagree. gating...';
   renderGate();
   $('reset').hidden = false;
   $('status').textContent = '';
 }
 
 function renderGate() {
+  const d = cur.data, isNum = cur.kind === 'num';
   const gate = $('gate');
   gate.hidden = false;
   requestAnimationFrame(() => gate.classList.add('show'));
 
-  const max = Math.max(...DATA.tally.map(v => v.count));
-  const votes = $('votes');
-  votes.innerHTML = '';
-  DATA.tally.forEach(v => {
-    const win = norm(v.answer) === MAJ;
+  $('gateTitle').innerHTML = '<span class="label">Gate 1 · </span> ' + (isNum ? 'Majority vote' : 'How the approaches clustered');
+
+  const max = Math.max.apply(null, d.tally.map(v => v.count));
+  const votes = $('votes'); votes.innerHTML = '';
+  d.tally.forEach(v => {
+    const win = norm(v.answer) === topNorm();
+    const pct = Math.max(6, Math.round(100 * v.count / max));
     const row = document.createElement('div');
-    row.className = 'vote ' + (win ? 'win' : 'lose');
-    const pct = Math.round(100 * v.count / max);
+    row.className = 'vote' + (win ? ' win' : '');
     row.innerHTML =
       '<span class="val">' + v.answer + '</span>' +
       '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
@@ -262,22 +358,38 @@ function renderGate() {
     votes.appendChild(row);
   });
 
-  $('majority').textContent = DATA.majority;
-  $('judge').textContent = DATA.judge;
-  $('judgeWhy').textContent = DATA.judgeWhy;
+  $('majCard').className = 'rescard ' + cur.kind;
+  $('judgeCard').className = 'rescard ' + cur.kind;
+  $('majLabel').textContent = isNum ? 'Majority' : 'Plurality';
+  $('majority').textContent = d.majority;
+  $('majNote').textContent = isNum ? 'The answer the most attempts agreed on.' : 'The approach the most attempts landed on.';
+  $('judge').textContent = d.judge;
+  $('judgeWhy').textContent = d.judgeWhy;
 
-  const right = DATA.expected && norm(DATA.expected) === MAJ;
-  $('verdict').innerHTML = DATA.expected
-    ? 'Correct answer: <span class="mono">' + DATA.expected + '</span>. Both gates agreed on it ' +
-      (right ? '<span class="ok">&#10003;</span>' : '') + ' — even though one attempt did not.'
-    : 'Both gates agreed on <span class="mono">' + DATA.majority + '</span>.';
+  const total = d.attempts.length;
+  if (d.expected) {
+    const right = norm(d.expected) === topNorm();
+    $('verdict').innerHTML = 'Correct answer: <span class="mono">' + d.expected + '</span>. Both gates agreed on it ' +
+      (right ? '<span class="ok">&#10003;</span>' : '') + ' &mdash; even though one attempt did not.';
+  } else {
+    const judgeMatches = norm(d.judge) === topNorm();
+    const plur = d.tally[0].count;
+    $('verdict').innerHTML = 'No single right answer here. ' + total + ' independent attempts spread across ' + d.tally.length + ' approaches. ' +
+      (judgeMatches
+        ? 'The plurality (' + plur + ' of ' + total + ') and an independent judge landed on the same one <span class="ok">&#10003;</span> &mdash; that agreement is the signal: '
+        : 'The judge picked the strongest of them: ') +
+      '<span class="mono">' + d.judge + '</span>';
+  }
 }
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 $('run').onclick = run;
 $('reset').onclick = run;
-if (location.search.includes('autoplay')) run();
+renderTabs();
+const params = new URLSearchParams(location.search);
+select(Number(params.get('s')) || 0);
+if (params.has('autoplay')) run();
 </script>
 </body>
 </html>
